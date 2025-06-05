@@ -100,6 +100,6 @@ private fun clearCart(cartViewModel: CartViewModel) {
 
 private fun generateEmptiedCartEvent(cartViewModel: CartViewModel) {
     val eventBuilder = OtelDemoApplication.eventBuilder("otel.demo.app", "cart.emptied")
-    eventBuilder.setAttribute(doubleKey("cart.total.value"), cartViewModel.getTotalPrice())
-        .emit()
+    eventBuilder?.setAttribute(doubleKey("cart.total.value"), cartViewModel.getTotalPrice())
+        ?.emit()
 }

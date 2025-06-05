@@ -2,9 +2,10 @@ import java.io.FileInputStream
 import java.util.Properties
 
 plugins {
-    alias(rootLibs.plugins.androidApp)
-    alias(libs.plugins.kotlinAndroid)
-    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.byteBuddy)
 }
 
 val localProperties = Properties()
@@ -16,7 +17,7 @@ android {
 
     defaultConfig {
         applicationId = "io.opentelemetry.android.demo"
-        minSdk = 21
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -38,12 +39,12 @@ android {
         }
     }
     buildFeatures {
-        viewBinding = true
+        compose = true
     }
     val javaVersion = JavaVersion.VERSION_11
     compileOptions {
-        sourceCompatibility(javaVersion)
-        targetCompatibility(javaVersion)
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
         isCoreLibraryDesugaringEnabled = true
     }
 
@@ -53,6 +54,20 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.core.ktx)
+    coreLibraryDesugaring(libs.desugar.jdk.libs.v203)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.security.crypto)
+    implementation(libs.okhttp)
+    implementation(libs.androidx.material.icons.extended)
     implementation(libs.gson)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.constraintlayout)
@@ -62,24 +77,25 @@ dependencies {
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
     implementation(libs.opentelemetry.api.incubator)
-    implementation(libs.androidx.navigation.compose)
 
-    coreLibraryDesugaring(libs.desugarJdkLibs)
+    testImplementation(libs.junit)
 
-    implementation("io.honeycomb.android:honeycomb-opentelemetry-android:0.0.11")
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
-
-    implementation(libs.opentelemetry.exporter.otlp)
-
-    testImplementation(libs.bundles.junit)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.ui.test.junit4)
+
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation(libs.opentelemetry.sdk)
+    implementation(libs.otel.kotlin.extension)
+    implementation(libs.honeycomb.opentelemetry.android)
+    implementation(libs.honeycomb.opentelemetry.android.compose)
+    implementation(libs.android.agent)
+    implementation(libs.otel.semconv.incubating)
+    implementation(libs.opentelemetry.exporter.otlp)
+
+    implementation(libs.okhttp.agent)  // OpenTelemetry OkHttp library
+    implementation(libs.okhttp.library)  // OpenTelemetry OkHttp library
+    byteBuddy(libs.okhttp.agent)  // OpenTelemetry OkHttp agent
 }

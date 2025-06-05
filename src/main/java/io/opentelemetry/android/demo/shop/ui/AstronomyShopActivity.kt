@@ -149,8 +149,8 @@ private fun generateOrderPlacedEvent(
 
     val eventBuilder = OtelDemoApplication.eventBuilder("otel.demo.app", "order.placed")
     eventBuilder
-        .setAttribute(doubleKey("order.total.value"), cartViewModel.getTotalPrice())
-        .setAttribute(stringKey("buyer.state"), checkoutInfoViewModel.shippingInfo.state)
-        .emit()
+        ?.setAttribute(doubleKey("order.total.value"), cartViewModel.getTotalPrice())
+        ?.setAttribute(stringKey("buyer.state"), checkoutInfoViewModel.shippingInfo.state)
+        ?.emit()
 }
 

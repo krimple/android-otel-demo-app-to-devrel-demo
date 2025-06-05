@@ -101,9 +101,9 @@ class InstrumentedAstronomyShopNavController(
     private fun generateNavigationEvent(eventName: String, payload: Map<String, String>) {
         val eventBuilder = OtelDemoApplication.eventBuilder("otel.demo.app.navigation", eventName)
         payload.forEach { (key, value) ->
-            eventBuilder.setAttribute(stringKey(key), value)
+            eventBuilder?.setAttribute(stringKey(key), value)
         }
-        eventBuilder.emit()
+        eventBuilder?.emit()
     }
 }
 

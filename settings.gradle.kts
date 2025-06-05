@@ -1,22 +1,24 @@
-rootProject.name = "opentelemetry-android-demo"
-
 pluginManagement {
     repositories {
+        google {
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
         mavenCentral()
-        google()
         gradlePluginPortal()
     }
 }
 dependencyResolutionManagement {
-    versionCatalogs {
-        create("rootLibs") {
-            from(files("gradle/upstream.libs.versions.toml"))
-        }
-    }
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        mavenCentral()
         google()
+        mavenCentral()
+        mavenLocal()
     }
 }
+
+rootProject.name = "opentelemetry-android-demo"
 
