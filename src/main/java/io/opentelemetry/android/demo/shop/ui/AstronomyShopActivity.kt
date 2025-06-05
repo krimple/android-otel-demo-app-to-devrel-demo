@@ -15,12 +15,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.opentelemetry.api.GlobalOpenTelemetry
+import io.opentelemetry.context.Context as OtelContext
+import io.opentelemetry.extension.kotlin.asContextElement
+import kotlinx.coroutines.launch
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import io.opentelemetry.android.demo.OtelDemoApplication
@@ -47,12 +53,35 @@ class AstronomyShopActivity : AppCompatActivity() {
 
 @Composable
 fun AstronomyShopScreen() {
-    val productsClient = ProductCatalogClient(LocalContext.current)
-    val products by remember { mutableStateOf(productsClient.get()) }
     val context = LocalContext.current
+    val productsClient = remember { ProductCatalogClient(context) }
+    var products by remember { mutableStateOf(emptyList<io.opentelemetry.android.demo.shop.model.Product>()) }
     val astronomyShopNavController = rememberAstronomyShopNavController()
     val cartViewModel: CartViewModel = viewModel()
     val checkoutInfoViewModel: CheckoutInfoViewModel = viewModel()
+
+    LaunchedEffect(Unit) {
+        val tracer = GlobalOpenTelemetry.getTracer("astronomy-shop")
+        val span = tracer.spanBuilder("load_products")
+            .setAttribute("component", "astronomy_shop")
+            .startSpan()
+        
+        try {
+            span.makeCurrent().use { scope ->
+                val otelContext = OtelContext.current()
+                launch(otelContext.asContextElement()) {
+                    products = productsClient.getProducts(otelContext)
+                    span.setAttribute("products.loaded", products.size.toLong())
+                }
+            }
+        } catch (e: Exception) {
+            span.recordException(e)
+            span.setAttribute("error", true)
+            throw e
+        } finally {
+            span.end()
+        }
+    }
 
     DemoAppTheme {
         Surface(

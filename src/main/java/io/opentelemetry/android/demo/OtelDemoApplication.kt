@@ -11,7 +11,7 @@ import java.io.IOException
 import java.util.Properties
 import io.honeycomb.opentelemetry.android.Honeycomb
 import io.honeycomb.opentelemetry.android.HoneycombOptions
-// import io.opentelemetry.android.OpenTelemetryRum
+import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.api.incubator.logs.ExtendedLogRecordBuilder
 import io.opentelemetry.api.logs.LogRecordBuilder
 import io.opentelemetry.api.metrics.LongCounter
@@ -54,12 +54,10 @@ class OtelDemoApplication : Application() {
 
 
     companion object {
-        var rum: Any? = null
+        var rum: OpenTelemetryRum? = null
 
         fun tracer(name: String): Tracer? {
-
-            // TODO: Access tracing through Honeycomb SDK
-            return null
+            return rum?.openTelemetry?.getTracer(name)
         }
 
         fun counter(name: String): LongCounter? {
