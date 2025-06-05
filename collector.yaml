@@ -1,0 +1,32 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+extensions:
+exporters:
+  # otlphttp:
+  #  traces_endpoint: "http://jaeger:4318/v1/traces"
+  otlp:
+    endpoint: https://api.honeycomb.io:443
+    headers:
+      "x-honeycomb-team": ${env:HONEYCOMB_API_KEY}
+
+  debug:
+    verbosity: normal
+  debug/detailed:
+    verbosity: detailed
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [debug, otlp]
+    logs:
+      receivers: [otlp]
+      exporters: [debug, otlp]
+    metrics:
+      receivers: [ otlp ]
+      exporters: [ debug, otlp ]
+
