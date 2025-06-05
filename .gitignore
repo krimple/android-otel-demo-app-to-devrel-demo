@@ -5,3 +5,5 @@
 demo-app/local.properties
 .DS_Store
 **/build/
+src/main/assets/env
+src/main/assets/otel.properties

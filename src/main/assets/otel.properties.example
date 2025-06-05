@@ -1,0 +1,8 @@
+# OpenTelemetry Configuration Properties
+# Copy this file to otel.properties and set your actual values
+
+# Honeycomb API Key - get this from your Honeycomb account
+HONEYCOMB_API_KEY=your_honeycomb_api_key_here
+
+# Service name for telemetry identification
+SERVICE_NAME=android-otel-demo

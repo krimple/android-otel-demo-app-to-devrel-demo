@@ -7,6 +7,8 @@ package io.opentelemetry.android.demo
 
 import android.app.Application
 import android.util.Log
+import java.io.IOException
+import java.util.Properties
 import io.honeycomb.opentelemetry.android.Honeycomb
 import io.honeycomb.opentelemetry.android.HoneycombOptions
 // import io.opentelemetry.android.OpenTelemetryRum
@@ -23,16 +25,28 @@ class OtelDemoApplication : Application() {
 
         Log.i(TAG, "Initializing Honeycomb OpenTelemetry Android SDK")
         
+        val otelProperties = Properties()
+        try {
+            val inputStream = assets.open("otel.properties")
+            otelProperties.load(inputStream)
+            inputStream.close()
+        } catch (e: IOException) {
+            Log.w(TAG, "No otel.properties file found in assets, using defaults")
+        }
+        
+        val apiKey = otelProperties.getProperty("HONEYCOMB_API_KEY") ?: getString(R.string.rum_access_token)
+        val serviceName = otelProperties.getProperty("SERVICE_NAME") ?: "android-otel-demo"
+        
         val options = HoneycombOptions.builder(this)
-            .setApiKey(getString(R.string.rum_access_token))
-            .setServiceName("android-otel-demo")
+            .setApiKey(apiKey)
+            .setServiceName(serviceName)
             .setServiceVersion("1.0")
             .setDebug(true)
             .build()
 
         try {
             rum = Honeycomb.configure(this, options)
-            Log.d(TAG, "RUM session started")
+            Log.d(TAG, "RUM session started with service: $serviceName")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize Honeycomb!", e)
         }
@@ -43,6 +57,7 @@ class OtelDemoApplication : Application() {
         var rum: Any? = null
 
         fun tracer(name: String): Tracer? {
+
             // TODO: Access tracing through Honeycomb SDK
             return null
         }
