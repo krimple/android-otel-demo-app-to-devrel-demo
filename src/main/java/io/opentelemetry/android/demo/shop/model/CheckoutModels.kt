@@ -7,7 +7,8 @@ data class CheckoutRequest(
     val email: String,
     val address: CheckoutAddress,
     val userCurrency: String,
-    val creditCard: CheckoutCreditCard
+    val creditCard: CheckoutCreditCard,
+    val items: List<CheckoutRequestItem>
 )
 
 data class CheckoutAddress(
@@ -23,6 +24,11 @@ data class CheckoutCreditCard(
     val creditCardExpirationMonth: Int,
     val creditCardExpirationYear: Int,
     val creditCardNumber: String
+)
+
+data class CheckoutRequestItem(
+    val productId: String,
+    val quantity: Int
 )
 
 data class CheckoutResponse(
