@@ -16,6 +16,9 @@ class DemoViewModel : ViewModel() {
     private val tracer = OtelDemoApplication.tracer("otel.demo")
 
     init {
+        // Update session ID on initialization
+        updateSession()
+        
         viewModelScope.launch {
             while (true) {
                 delay(5000)
@@ -24,8 +27,9 @@ class DemoViewModel : ViewModel() {
         }
     }
 
-    private fun updateSession() {
-        // TODO
+    fun updateSession() {
+        // Hardcoded session ID since there's currently no way to access it from the SDK
+        sessionIdState.value = "demo-session-12345"
     }
 
     private fun sendTrace(

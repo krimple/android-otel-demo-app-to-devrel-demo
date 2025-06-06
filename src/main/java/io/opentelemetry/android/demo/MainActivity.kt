@@ -86,6 +86,5 @@ class MainActivity : ComponentActivity() {
                 Log.d(TAG, "Main Activity started ")
             }
         }
-        viewModel.sessionIdState.value = "honeycomb-session"
     }
 }

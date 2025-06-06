@@ -19,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -30,6 +31,7 @@ import kotlinx.coroutines.launch
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import io.opentelemetry.android.demo.OtelDemoApplication
+import io.opentelemetry.android.demo.shop.clients.CheckoutApiService
 import io.opentelemetry.android.demo.shop.clients.ProductCatalogClient
 import io.opentelemetry.android.demo.shop.ui.cart.CartScreen
 import io.opentelemetry.android.demo.shop.ui.cart.CartViewModel
@@ -55,10 +57,12 @@ class AstronomyShopActivity : AppCompatActivity() {
 fun AstronomyShopScreen() {
     val context = LocalContext.current
     val productsClient = remember { ProductCatalogClient(context) }
+    val checkoutApiService = remember { CheckoutApiService(GlobalOpenTelemetry.getTracer("checkout-api")) }
     var products by remember { mutableStateOf(emptyList<io.opentelemetry.android.demo.shop.model.Product>()) }
     val astronomyShopNavController = rememberAstronomyShopNavController()
     val cartViewModel: CartViewModel = viewModel()
     val checkoutInfoViewModel: CheckoutInfoViewModel = viewModel()
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         val tracer = GlobalOpenTelemetry.getTracer("astronomy-shop")
@@ -135,11 +139,16 @@ fun AstronomyShopScreen() {
                     }
                     composable(MainDestinations.CHECKOUT_INFO_ROUTE) {
                         InfoScreen(
-                            onPlaceOrderClick = {instrumentedPlaceOrder(
-                                astronomyShopNavController = astronomyShopNavController,
-                                cartViewModel = cartViewModel,
-                                checkoutInfoViewModel = checkoutInfoViewModel
-                            )},
+                            onPlaceOrderClick = {
+                                coroutineScope.launch {
+                                    instrumentedPlaceOrder(
+                                        astronomyShopNavController = astronomyShopNavController,
+                                        cartViewModel = cartViewModel,
+                                        checkoutInfoViewModel = checkoutInfoViewModel,
+                                        checkoutApiService = checkoutApiService
+                                    )
+                                }
+                            },
                             upPress = {astronomyShopNavController.upPress()},
                             checkoutInfoViewModel = checkoutInfoViewModel
                         )
@@ -156,13 +165,25 @@ fun AstronomyShopScreen() {
     }
 }
 
-private fun instrumentedPlaceOrder(
+private suspend fun instrumentedPlaceOrder(
     astronomyShopNavController: InstrumentedAstronomyShopNavController,
     cartViewModel: CartViewModel,
-    checkoutInfoViewModel: CheckoutInfoViewModel
+    checkoutInfoViewModel: CheckoutInfoViewModel,
+    checkoutApiService: CheckoutApiService
 ){
-    generateOrderPlacedEvent(cartViewModel, checkoutInfoViewModel)
-    astronomyShopNavController.navigateToCheckoutConfirmation()
+    try {
+        val checkoutResponse = checkoutApiService.placeOrder(cartViewModel, checkoutInfoViewModel)
+        checkoutInfoViewModel.updateCheckoutResponse(checkoutResponse)
+        generateOrderPlacedEvent(cartViewModel, checkoutInfoViewModel)
+        cartViewModel.clearCart()
+        astronomyShopNavController.navigateToCheckoutConfirmation()
+    } catch (e: Exception) {
+        // TODO: Handle error properly - for now just log and proceed with original flow
+        e.printStackTrace()
+        generateOrderPlacedEvent(cartViewModel, checkoutInfoViewModel)
+        cartViewModel.clearCart()
+        astronomyShopNavController.navigateToCheckoutConfirmation()
+    }
 }
 
 private fun generateOrderPlacedEvent(

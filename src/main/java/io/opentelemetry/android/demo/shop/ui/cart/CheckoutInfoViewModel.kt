@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import io.opentelemetry.android.demo.shop.model.CheckoutResponse
 
 data class ShippingInfo(
     var email: String = "someone@example.com",
@@ -39,12 +40,19 @@ class CheckoutInfoViewModel : ViewModel() {
     var paymentInfo by mutableStateOf(PaymentInfo())
         private set
 
+    var checkoutResponse by mutableStateOf<CheckoutResponse?>(null)
+        private set
+
     fun updateShippingInfo(newShippingInfo: ShippingInfo) {
         shippingInfo = newShippingInfo
     }
 
     fun updatePaymentInfo(newPaymentInfo: PaymentInfo) {
         paymentInfo = newPaymentInfo
+    }
+
+    fun updateCheckoutResponse(response: CheckoutResponse) {
+        checkoutResponse = response
     }
 
     fun canProceedToCheckout(): Boolean {
