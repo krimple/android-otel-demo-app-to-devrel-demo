@@ -21,7 +21,7 @@ class ProductApiService(
             .get()
             .build()
 
-        val bodyText = FetchHelpers.executeRequest(httpClient, request)
+        val bodyText = FetchHelpers.executeRequest(request)
         val parsedBody = Gson().fromJson(
             bodyText,
             ProductDeserializationWrapper::class.java
