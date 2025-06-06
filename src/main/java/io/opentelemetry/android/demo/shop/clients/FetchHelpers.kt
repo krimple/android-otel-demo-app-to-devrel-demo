@@ -22,7 +22,8 @@ class FetchHelpers {
     companion object {
         private val TEXT_MAP_SETTER: TextMapSetter<Request.Builder> = OkHttpTextMapSetter()
 
-        suspend fun executeRequest(client: OkHttpClient, request: Request): String {
+        suspend fun executeRequest(request: Request): String {
+            val client = OkHttpClient.Builder().build()
             
             val result: Result<String> = suspendCoroutine { cont ->
                 val callback = object : Callback {
