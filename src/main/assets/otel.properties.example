@@ -6,3 +6,7 @@ HONEYCOMB_API_KEY=your_honeycomb_api_key_here
 
 # Service name for telemetry identification
 SERVICE_NAME=android-otel-demo
+
+# Where to point to for sending telemetry - the prod telescope shop of course!
+TELEMETRY_ENDPOINT=https://www.zurelia.honeydemo.io:443/otlp-http
+

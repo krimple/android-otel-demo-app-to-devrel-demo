@@ -30,6 +30,7 @@ import io.opentelemetry.extension.kotlin.asContextElement
 import kotlinx.coroutines.launch
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import io.honeycomb.opentelemetry.android.Honeycomb
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.clients.CheckoutApiService
 import io.opentelemetry.android.demo.shop.clients.ProductCatalogClient
@@ -56,7 +57,7 @@ class AstronomyShopActivity : AppCompatActivity() {
 @Composable
 fun AstronomyShopScreen() {
     val context = LocalContext.current
-    val productsClient = remember { ProductCatalogClient(context) }
+    val productsClient = remember { ProductCatalogClient() }
     val checkoutApiService = remember { CheckoutApiService(GlobalOpenTelemetry.getTracer("checkout-api")) }
     var products by remember { mutableStateOf(emptyList<io.opentelemetry.android.demo.shop.model.Product>()) }
     val astronomyShopNavController = rememberAstronomyShopNavController()
@@ -79,6 +80,7 @@ fun AstronomyShopScreen() {
                 }
             }
         } catch (e: Exception) {
+            OtelDemoApplication.rum?.let { Honeycomb.logException(it, e) }
             span.recordException(e)
             span.setAttribute("error", true)
             throw e
@@ -141,12 +143,15 @@ fun AstronomyShopScreen() {
                         InfoScreen(
                             onPlaceOrderClick = {
                                 coroutineScope.launch {
-                                    instrumentedPlaceOrder(
-                                        astronomyShopNavController = astronomyShopNavController,
-                                        cartViewModel = cartViewModel,
-                                        checkoutInfoViewModel = checkoutInfoViewModel,
-                                        checkoutApiService = checkoutApiService
-                                    )
+                                    val otelContext = OtelContext.current()
+                                    launch(otelContext.asContextElement()) {
+                                        instrumentedPlaceOrder(
+                                            astronomyShopNavController = astronomyShopNavController,
+                                            cartViewModel = cartViewModel,
+                                            checkoutInfoViewModel = checkoutInfoViewModel,
+                                            checkoutApiService = checkoutApiService
+                                        )
+                                    }
                                 }
                             },
                             upPress = {astronomyShopNavController.upPress()},
@@ -179,6 +184,8 @@ private suspend fun instrumentedPlaceOrder(
         astronomyShopNavController.navigateToCheckoutConfirmation()
     } catch (e: Exception) {
         // TODO: Handle error properly - for now just log and proceed with original flow
+
+        OtelDemoApplication.rum?.let { Honeycomb.logException(it, e) }
         e.printStackTrace()
         generateOrderPlacedEvent(cartViewModel, checkoutInfoViewModel)
         cartViewModel.clearCart()

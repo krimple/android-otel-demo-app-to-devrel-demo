@@ -36,9 +36,12 @@ class OtelDemoApplication : Application() {
         
         val apiKey = otelProperties.getProperty("HONEYCOMB_API_KEY") ?: getString(R.string.rum_access_token)
         val serviceName = otelProperties.getProperty("SERVICE_NAME") ?: "android-otel-demo"
+        val endpoint = otelProperties.getProperty("TELEMETRY_ENDPOINT") ?: "bad"
+        val apiEndpoint = otelProperties.getProperty("API_ENDPOINT") ?: "https://www.zurelia.honeydemo.io/api"
         
         val options = HoneycombOptions.builder(this)
             .setApiKey(apiKey)
+            .setApiEndpoint(endpoint)
             .setServiceName(serviceName)
             .setServiceVersion("1.0")
             .setDebug(true)
@@ -46,6 +49,7 @@ class OtelDemoApplication : Application() {
 
         try {
             rum = Honeycomb.configure(this, options)
+            Companion.apiEndpoint = apiEndpoint
             Log.d(TAG, "RUM session started with service: $serviceName")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize Honeycomb!", e)
@@ -55,6 +59,7 @@ class OtelDemoApplication : Application() {
 
     companion object {
         var rum: OpenTelemetryRum? = null
+        var apiEndpoint: String = "https://www.zurelia.honeydemo.io/api"
 
         fun tracer(name: String): Tracer? {
             return rum?.openTelemetry?.getTracer(name)

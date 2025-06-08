@@ -43,7 +43,7 @@ fun ProductDetails(
 
     var slowRender by remember { mutableStateOf(false) }
 
-    val productsClient = ProductCatalogClient(context)
+    val productsClient = ProductCatalogClient()
     val recommendationService = remember { RecommendationService(productsClient, cartViewModel) }
     val recommendedProducts = remember { recommendationService.getRecommendedProducts(product) }
     Box(

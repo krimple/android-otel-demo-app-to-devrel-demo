@@ -1,6 +1,7 @@
 package io.opentelemetry.android.demo.shop.clients
 
 import com.google.gson.Gson
+import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.model.*
 import io.opentelemetry.android.demo.shop.ui.cart.CartViewModel
 import io.opentelemetry.android.demo.shop.ui.cart.CheckoutInfoViewModel
@@ -18,7 +19,6 @@ class CheckoutApiService(
     private val tracer: Tracer
 ) {
     companion object {
-        private const val CHECKOUT_API_URL = "https://www.zurelia.honeydemo.io/api/checkout?currencyCode=USD"
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
     }
 
@@ -31,8 +31,9 @@ class CheckoutApiService(
             .setParent(parentContext)
             .startSpan()
             
-        try {
-            val checkoutRequest = buildCheckoutRequest(cartViewModel, checkoutInfoViewModel)
+        return span.makeCurrent().use {
+            try {
+                val checkoutRequest = buildCheckoutRequest(cartViewModel, checkoutInfoViewModel)
             
             // Add checkout request attributes
             span.setAttribute(stringKey("checkout.user_id"), checkoutRequest.userId)
@@ -60,8 +61,9 @@ class CheckoutApiService(
             }
             
             val requestBody = Gson().toJson(checkoutRequest)
+            val checkoutUrl = "${OtelDemoApplication.apiEndpoint}/checkout?currencyCode=USD"
             val request = Request.Builder()
-                .url(CHECKOUT_API_URL)
+                .url(checkoutUrl)
                 .post(requestBody.toRequestBody(JSON_MEDIA_TYPE))
                 .build()
 
@@ -84,16 +86,17 @@ class CheckoutApiService(
                 totalCost += item.cost.toDouble()
             }
             
-            span.setAttribute(doubleKey("checkout.response.total_item_cost"), totalCost)
-            span.setAttribute(doubleKey("checkout.response.total_order_cost"), totalCost + checkoutResponse.shippingCost.toDouble())
-            
-            return checkoutResponse
-        } catch (e: Exception) {
-            span.recordException(e)
-            span.setAttribute(stringKey("error.message"), e.message ?: "Unknown error")
-            throw e
-        } finally {
-            span.end()
+                span.setAttribute(doubleKey("checkout.response.total_item_cost"), totalCost)
+                span.setAttribute(doubleKey("checkout.response.total_order_cost"), totalCost + checkoutResponse.shippingCost.toDouble())
+                
+                checkoutResponse
+            } catch (e: Exception) {
+                span.recordException(e)
+                span.setAttribute(stringKey("error.message"), e.message ?: "Unknown error")
+                throw e
+            } finally {
+                span.end()
+            }
         }
     }
 

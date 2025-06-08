@@ -25,7 +25,7 @@ fun CartScreen(
     onProductClick: (String) -> Unit
 ) {
     val context = LocalContext.current
-    val productsClient = ProductCatalogClient(context)
+    val productsClient = ProductCatalogClient()
     val recommendationService = remember { RecommendationService(productsClient, cartViewModel) }
     val cartItems by cartViewModel.cartItems.collectAsState()
     val isCartEmpty = cartItems.isEmpty()
