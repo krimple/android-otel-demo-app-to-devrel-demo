@@ -13,6 +13,7 @@ import okhttp3.Request
 import okhttp3.Response
 import java.io.IOException
 import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
 class OkHttpTextMapSetter : TextMapSetter<Request.Builder> {
@@ -30,52 +31,48 @@ class FetchHelpers {
             val tracer = OtelDemoApplication.rum?.openTelemetry?.getTracer("astronomy-shop")
 
             val span = tracer?.spanBuilder("executeRequest")?.startSpan()
-            span?.makeCurrent()
+            return try {
+                return span?.makeCurrent().use {
+                    val result: Result<String> = suspendCoroutine { cont ->
+                        val callback = object : Callback {
+                            override fun onFailure(call: Call, e: IOException) {
+                                span?.setStatus(StatusCode.ERROR)
+                                span?.recordException(e)
+                                cont.resumeWithException(Exception("http error", e))
+                            }
 
-            val result: Result<String> = suspendCoroutine { cont ->
-                val callback = object : Callback {
-                    override fun onFailure(call: Call, e: IOException) {
-                        span?.setStatus(StatusCode.ERROR)
-                        span?.recordException(e)
-                        span?.end()
-                        cont.resume(Result.failure(Exception("http error", e)))
-                    }
+                            override fun onResponse(call: Call, response: Response) {
+                                val responseBody = response.body?.string() ?: ""
 
-                    override fun onResponse(call: Call, response: Response) {
-                        val responseBody = response.body?.string() ?: ""
+                                if (response.code < 200 || response.code >= 300) {
+                                    span?.setStatus(StatusCode.ERROR)
+                                    val exception = Exception("error ${response.code}: $responseBody")
 
-                        if (response.code < 200 || response.code >= 300) {
-                            span?.setStatus(StatusCode.ERROR)
-                            val exception = Exception("error ${response.code}: $responseBody")
+                                    span?.recordException(exception,
+                                        Attributes.builder()
+                                            .put("name", "exception")
+                                            .put("foo", "bar")
+                                            .build())
+                                    cont.resumeWithException(exception)
+                                    return
+                                }
 
-                            span?.recordException(exception,
-                                Attributes.builder()
-                                    .put("name", "exception")
-                                    .put("foo", "bar")
-                                    .build())
-                            span?.end()
-                            cont.resume(Result.failure(exception))
-                            return
+                                cont.resume(Result.success(responseBody))
+                            }
                         }
 
-                        // all good? welp, end the span and return the value
-                        span?.end()
-                        cont.resume(Result.success(responseBody))
+                        client.newCall(request).enqueue(callback)
                     }
+                    
+                    result.getOrThrow()
                 }
-
-//                val builder = OkHttpClient.Builder()
-//                OtelDemoApplication.rum?.openTelemetry?.propagators?.textMapPropagator?.inject(
-//                    OtelContext.current(),
-//                    builder,
-//                    TEXT_MAP_SETTER
-//                )
-
-                // val requestWithHeaders = builder.build()
-                client.newCall(request).enqueue(callback)
+            } catch (e: Exception) {
+                span?.setStatus(StatusCode.ERROR)
+                span?.recordException(e)
+                throw e
+            } finally {
+                span?.end()
             }
-            
-            return result.getOrThrow()
         }
     }
 }

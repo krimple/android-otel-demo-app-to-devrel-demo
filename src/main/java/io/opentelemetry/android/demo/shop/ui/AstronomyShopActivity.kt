@@ -24,9 +24,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
-import io.opentelemetry.api.GlobalOpenTelemetry
-import io.opentelemetry.context.Context as OtelContext
-import io.opentelemetry.extension.kotlin.asContextElement
 import kotlinx.coroutines.launch
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -34,7 +31,6 @@ import io.honeycomb.opentelemetry.android.Honeycomb
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.clients.CheckoutApiService
 import io.opentelemetry.android.demo.shop.clients.ProductApiService
-import io.opentelemetry.android.demo.shop.clients.ProductCatalogClient
 import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.android.demo.shop.ui.cart.CartScreen
 import io.opentelemetry.android.demo.shop.ui.cart.CartViewModel
@@ -59,11 +55,9 @@ class AstronomyShopActivity : AppCompatActivity() {
 @Composable
 fun AstronomyShopScreen() {
     val context = LocalContext.current
-    val productCatalogClient = remember { ProductCatalogClient() }
     val productApiService = remember { ProductApiService() }
-
     val checkoutApiService = remember { CheckoutApiService() }
-    var products by remember { mutableStateOf(emptyList<io.opentelemetry.android.demo.shop.model.Product>()) }
+    var products by remember { mutableStateOf(emptyList<Product>()) }
     val astronomyShopNavController = rememberAstronomyShopNavController()
     val cartViewModel: CartViewModel = viewModel()
     val checkoutInfoViewModel: CheckoutInfoViewModel = viewModel()
@@ -77,19 +71,17 @@ fun AstronomyShopScreen() {
         val span = tracer?.spanBuilder("loadProducts")
             ?.setAttribute("component", "astronomy_shop")
             ?.startSpan()
-        try {
-            span?.makeCurrent().use { scope ->
-                launch(OtelContext.current().asContextElement()) {
-                    try {
-                        products = productApiService.fetchProducts()
-                        span?.setAttribute("products.loaded", products.size.toLong())
-                    } catch (e: Exception) {
-                        products = ArrayList<Product>()
-                    }
-                }.join()
+        
+        span?.makeCurrent().use {
+            try {
+                products = productApiService.fetchProducts()
+                span?.setAttribute("products.loaded", products.size.toLong())
+            } catch (e: Exception) {
+                span?.recordException(e)
+                products = ArrayList<Product>()
+            } finally {
+                span?.end()
             }
-        } finally {
-            span?.end()
         }
     }
 
@@ -147,15 +139,12 @@ fun AstronomyShopScreen() {
                         InfoScreen(
                             onPlaceOrderClick = {
                                 coroutineScope.launch {
-                                    val otelContext = OtelContext.current()
-                                    launch(otelContext.asContextElement()) {
-                                        instrumentedPlaceOrder(
-                                            astronomyShopNavController = astronomyShopNavController,
-                                            cartViewModel = cartViewModel,
-                                            checkoutInfoViewModel = checkoutInfoViewModel,
-                                            checkoutApiService = checkoutApiService
-                                        )
-                                    }
+                                    instrumentedPlaceOrder(
+                                        astronomyShopNavController = astronomyShopNavController,
+                                        cartViewModel = cartViewModel,
+                                        checkoutInfoViewModel = checkoutInfoViewModel,
+                                        checkoutApiService = checkoutApiService
+                                    )
                                 }
                             },
                             upPress = {astronomyShopNavController.upPress()},
@@ -180,20 +169,27 @@ private suspend fun instrumentedPlaceOrder(
     checkoutInfoViewModel: CheckoutInfoViewModel,
     checkoutApiService: CheckoutApiService
 ){
+    val tracer = OtelDemoApplication.tracer("astronomy-shop")
+    val span = tracer?.spanBuilder("placeOrder")?.startSpan()
     try {
-        val checkoutResponse = checkoutApiService.placeOrder(cartViewModel, checkoutInfoViewModel)
-        checkoutInfoViewModel.updateCheckoutResponse(checkoutResponse)
-        generateOrderPlacedEvent(cartViewModel, checkoutInfoViewModel)
-        cartViewModel.clearCart()
-        astronomyShopNavController.navigateToCheckoutConfirmation()
-    } catch (e: Exception) {
-        // TODO: Handle error properly - for now just log and proceed with original flow
-
-        OtelDemoApplication.rum?.let { Honeycomb.logException(it, e) }
-        e.printStackTrace()
-        generateOrderPlacedEvent(cartViewModel, checkoutInfoViewModel)
-        cartViewModel.clearCart()
-        astronomyShopNavController.navigateToCheckoutConfirmation()
+        span?.makeCurrent().use {
+            try {
+                val checkoutResponse = checkoutApiService.placeOrder(cartViewModel, checkoutInfoViewModel)
+                checkoutInfoViewModel.updateCheckoutResponse(checkoutResponse)
+                generateOrderPlacedEvent(cartViewModel, checkoutInfoViewModel)
+                cartViewModel.clearCart()
+                astronomyShopNavController.navigateToCheckoutConfirmation()
+            } catch (e: Exception) {
+                span?.recordException(e)
+                OtelDemoApplication.rum?.let { Honeycomb.logException(it, e) }
+                e.printStackTrace()
+                generateOrderPlacedEvent(cartViewModel, checkoutInfoViewModel)
+                cartViewModel.clearCart()
+                astronomyShopNavController.navigateToCheckoutConfirmation()
+            }
+        }
+    } finally {
+        span?.end()
     }
 }
 
@@ -201,17 +197,22 @@ private fun generateOrderPlacedEvent(
     cartViewModel: CartViewModel,
     checkoutInfoViewModel: CheckoutInfoViewModel
 ) {
-    // Adding span instead of log entry
-    OtelDemoApplication.tracer("otel.demo.app")?.spanBuilder("orderPlaced")
+    val tracer = OtelDemoApplication.tracer("otel.demo.app")
+    val span = tracer?.spanBuilder("orderPlaced")
         ?.setAttribute(doubleKey("order.total.value"), cartViewModel.getTotalPrice())
         ?.setAttribute(stringKey("buyer.state"), checkoutInfoViewModel.shippingInfo.state)
         ?.startSpan()
-        ?.end()
-
-    val eventBuilder = OtelDemoApplication.eventBuilder("otel.demo.app", "order.placed")
-    eventBuilder
-        ?.setAttribute(doubleKey("order.total.value"), cartViewModel.getTotalPrice())
-        ?.setAttribute(stringKey("buyer.state"), checkoutInfoViewModel.shippingInfo.state)
-        ?.emit()
+    
+    try {
+        span?.makeCurrent().use {
+            val eventBuilder = OtelDemoApplication.eventBuilder("otel.demo.app", "order.placed")
+            eventBuilder
+                ?.setAttribute(doubleKey("order.total.value"), cartViewModel.getTotalPrice())
+                ?.setAttribute(stringKey("buyer.state"), checkoutInfoViewModel.shippingInfo.state)
+                ?.emit()
+        }
+    } finally {
+        span?.end()
+    }
 }
 

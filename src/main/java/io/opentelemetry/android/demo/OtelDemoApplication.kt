@@ -12,7 +12,6 @@ import java.util.Properties
 import io.honeycomb.opentelemetry.android.Honeycomb
 import io.honeycomb.opentelemetry.android.HoneycombOptions
 import io.opentelemetry.android.OpenTelemetryRum
-import io.opentelemetry.api.incubator.logs.ExtendedLogRecordBuilder
 import io.opentelemetry.api.logs.LogRecordBuilder
 import io.opentelemetry.api.metrics.LongCounter
 import io.opentelemetry.api.trace.Tracer

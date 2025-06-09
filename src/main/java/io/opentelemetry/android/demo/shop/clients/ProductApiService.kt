@@ -18,7 +18,7 @@ class ProductApiService(
         Log.d("otel.demo", "Span created: $span");
         return try {
             span?.makeCurrent().use {
-                val productsUrl = "${OtelDemoApplication.apiEndpoint}/prodcts"
+                val productsUrl = "${OtelDemoApplication.apiEndpoint}/products"
                 Log.d("otel.demo", "Making request to: $productsUrl")
                 val request = Request.Builder()
                     .url(productsUrl)
