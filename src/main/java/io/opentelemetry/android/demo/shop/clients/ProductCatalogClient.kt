@@ -9,15 +9,15 @@ import okhttp3.OkHttpClient
 class ProductCatalogClient {
     private val httpClient = OkHttpClient()
     private val tracer = GlobalOpenTelemetry.getTracer("product-catalog-client")
-    private val apiService = ProductApiService(httpClient, tracer)
+    private val productApiService = ProductApiService(httpClient, tracer)
 
-    suspend fun getProducts(parentContext: OtelContext = OtelContext.current()): List<Product> {
-        return apiService.fetchProducts(parentContext)
+    suspend fun getProducts(parentContext: OtelContext): List<Product> {
+        return productApiService.fetchProducts(parentContext)
     }
 
-    fun get(): List<Product> {
+    fun get(parentContext: OtelContext): List<Product> {
         return runBlocking {
-            getProducts()
+            getProducts(parentContext)
         }
     }
 

@@ -34,6 +34,7 @@ import io.honeycomb.opentelemetry.android.Honeycomb
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.clients.CheckoutApiService
 import io.opentelemetry.android.demo.shop.clients.ProductCatalogClient
+import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.android.demo.shop.ui.cart.CartScreen
 import io.opentelemetry.android.demo.shop.ui.cart.CartViewModel
 import io.opentelemetry.android.demo.shop.ui.cart.CheckoutConfirmationScreen
@@ -57,7 +58,7 @@ class AstronomyShopActivity : AppCompatActivity() {
 @Composable
 fun AstronomyShopScreen() {
     val context = LocalContext.current
-    val productsClient = remember { ProductCatalogClient() }
+    val productCatalogClient = remember { ProductCatalogClient() }
     val checkoutApiService = remember { CheckoutApiService(GlobalOpenTelemetry.getTracer("checkout-api")) }
     var products by remember { mutableStateOf(emptyList<io.opentelemetry.android.demo.shop.model.Product>()) }
     val astronomyShopNavController = rememberAstronomyShopNavController()
@@ -67,26 +68,23 @@ fun AstronomyShopScreen() {
 
     LaunchedEffect(Unit) {
         val tracer = GlobalOpenTelemetry.getTracer("astronomy-shop")
-        val span = tracer.spanBuilder("load_products")
+        val span = tracer.spanBuilder("loadProducts")
             .setAttribute("component", "astronomy_shop")
             .startSpan()
         
-        try {
             span.makeCurrent().use { scope ->
                 val otelContext = OtelContext.current()
                 launch(otelContext.asContextElement()) {
-                    products = productsClient.getProducts(otelContext)
-                    span.setAttribute("products.loaded", products.size.toLong())
+                    try {
+                        products = productCatalogClient.getProducts(otelContext)
+                        span.setAttribute("products.loaded", products.size.toLong())
+                    } catch (e: Exception) {
+                        products = ArrayList<Product>()
+                    } finally {
+                       span?.end()
+                    }
                 }
             }
-        } catch (e: Exception) {
-            OtelDemoApplication.rum?.let { Honeycomb.logException(it, e) }
-            span.recordException(e)
-            span.setAttribute("error", true)
-            throw e
-        } finally {
-            span.end()
-        }
     }
 
     DemoAppTheme {

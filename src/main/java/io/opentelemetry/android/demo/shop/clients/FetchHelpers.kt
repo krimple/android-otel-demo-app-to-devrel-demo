@@ -1,6 +1,8 @@
 package io.opentelemetry.android.demo.shop.clients
 
 import io.opentelemetry.android.demo.OtelDemoApplication
+import io.opentelemetry.api.GlobalOpenTelemetry
+import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.context.Context as OtelContext
 import io.opentelemetry.context.propagation.TextMapSetter
 import okhttp3.Call
@@ -23,11 +25,21 @@ class FetchHelpers {
         private val TEXT_MAP_SETTER: TextMapSetter<Request.Builder> = OkHttpTextMapSetter()
 
         suspend fun executeRequest(request: Request): String {
-            val client = OkHttpClient.Builder().build()
-            
+            val client = OkHttpClient()
+            val tracer = GlobalOpenTelemetry.getTracer("astronomy-shop")
+            val parentContext = OtelContext.current()
+
+            val span = tracer.spanBuilder("executeRequest")
+                .setParent(parentContext)
+                .startSpan()
+            span.makeCurrent()
+
             val result: Result<String> = suspendCoroutine { cont ->
                 val callback = object : Callback {
                     override fun onFailure(call: Call, e: IOException) {
+                        span.setStatus(StatusCode.ERROR)
+                        span.recordException(e)
+                        span.end()
                         cont.resume(Result.failure(Exception("http error", e)))
                     }
 
@@ -35,11 +47,16 @@ class FetchHelpers {
                         val responseBody = response.body?.string() ?: ""
 
                         if (response.code < 200 || response.code >= 300) {
+                            span.setStatus(StatusCode.ERROR)
                             val exception = Exception("error ${response.code}: $responseBody")
+                            span.recordException(exception)
+                            span.end()
                             cont.resume(Result.failure(exception))
                             return
                         }
 
+                        // all good? welp, end the span and return the value
+                        span.end()
                         cont.resume(Result.success(responseBody))
                     }
                 }
