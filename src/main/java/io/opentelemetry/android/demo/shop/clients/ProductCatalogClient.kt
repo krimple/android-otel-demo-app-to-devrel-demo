@@ -1,24 +1,17 @@
 package io.opentelemetry.android.demo.shop.clients
 
+import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.model.Product
-import io.opentelemetry.api.GlobalOpenTelemetry
+import io.opentelemetry.extension.kotlin.asContextElement
 import io.opentelemetry.context.Context as OtelContext
 import kotlinx.coroutines.runBlocking
+
 import okhttp3.OkHttpClient
 
 class ProductCatalogClient {
-    private val httpClient = OkHttpClient()
-    private val tracer = GlobalOpenTelemetry.getTracer("product-catalog-client")
-    private val productApiService = ProductApiService()
+   private val productApiService = ProductApiService()
 
-    suspend fun getProducts(parentContext: OtelContext): List<Product> {
+    suspend fun getProducts(): List<Product> {
         return productApiService.fetchProducts()
     }
-
-    fun get(parentContext: OtelContext): List<Product> {
-        return runBlocking {
-            getProducts(parentContext)
-        }
-    }
-
 }

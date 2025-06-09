@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.opentelemetry.android.demo.OtelDemoApplication
+import io.opentelemetry.android.demo.shop.clients.ProductApiService
 import io.opentelemetry.android.demo.shop.clients.ProductCatalogClient
 import io.opentelemetry.android.demo.shop.clients.RecommendationService
 import io.opentelemetry.android.demo.shop.ui.products.ProductCard
@@ -25,8 +26,9 @@ fun CartScreen(
     onProductClick: (String) -> Unit
 ) {
     val context = LocalContext.current
-    val productsClient = ProductCatalogClient()
-    val recommendationService = remember { RecommendationService(productsClient, cartViewModel) }
+    val productCatalogClient = ProductCatalogClient()
+    val productApiService = ProductApiService()
+    val recommendationService = remember { RecommendationService(productCatalogClient, productApiService, cartViewModel) }
     val cartItems by cartViewModel.cartItems.collectAsState()
     val isCartEmpty = cartItems.isEmpty()
     val recommendedProducts = remember { recommendationService.getRecommendedProducts() }

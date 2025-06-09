@@ -11,20 +11,14 @@ class ProductApiServiceTest {
 
     @Test
     fun `service can be instantiated`() = runTest {
-        val httpClient = OkHttpClient()
-        val tracer = io.opentelemetry.api.GlobalOpenTelemetry.getTracer("test")
         val service = ProductApiService()
-        
         assertNotNull(service)
     }
 
     @Test 
     fun `context is properly used in service call`() = runTest {
-        val httpClient = OkHttpClient()
-        val tracer = io.opentelemetry.api.GlobalOpenTelemetry.getTracer("test")
         val service = ProductApiService()
-        val context = Context.current()
-        
+
         try {
             service.fetchProducts()
             fail("Expected an exception to be thrown")
@@ -36,8 +30,6 @@ class ProductApiServiceTest {
 
     @Test
     fun `fetchProducts creates correct request and calls FetchHelpers`() = runTest {
-        val httpClient = OkHttpClient()
-        val tracer = io.opentelemetry.api.GlobalOpenTelemetry.getTracer("test")
         val service = ProductApiService()
         
         // This test verifies that the service:

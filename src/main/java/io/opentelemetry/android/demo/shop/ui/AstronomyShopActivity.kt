@@ -33,6 +33,7 @@ import androidx.navigation.compose.composable
 import io.honeycomb.opentelemetry.android.Honeycomb
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.clients.CheckoutApiService
+import io.opentelemetry.android.demo.shop.clients.ProductApiService
 import io.opentelemetry.android.demo.shop.clients.ProductCatalogClient
 import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.android.demo.shop.ui.cart.CartScreen
@@ -59,32 +60,37 @@ class AstronomyShopActivity : AppCompatActivity() {
 fun AstronomyShopScreen() {
     val context = LocalContext.current
     val productCatalogClient = remember { ProductCatalogClient() }
-    val checkoutApiService = remember { CheckoutApiService(GlobalOpenTelemetry.getTracer("checkout-api")) }
+    val productApiService = remember { ProductApiService() }
+
+    val checkoutApiService = remember { CheckoutApiService() }
     var products by remember { mutableStateOf(emptyList<io.opentelemetry.android.demo.shop.model.Product>()) }
     val astronomyShopNavController = rememberAstronomyShopNavController()
     val cartViewModel: CartViewModel = viewModel()
     val checkoutInfoViewModel: CheckoutInfoViewModel = viewModel()
     val coroutineScope = rememberCoroutineScope()
 
+    // TODO if we don't get a span builder, won't this cease to send data?
+    // or is this a situation where the span builder would just return an
+    // invalid span that won't do anything?
     LaunchedEffect(Unit) {
-        val tracer = GlobalOpenTelemetry.getTracer("astronomy-shop")
-        val span = tracer.spanBuilder("loadProducts")
-            .setAttribute("component", "astronomy_shop")
-            .startSpan()
-        
-            span.makeCurrent().use { scope ->
-                val otelContext = OtelContext.current()
-                launch(otelContext.asContextElement()) {
+        val tracer = OtelDemoApplication.tracer("astronomy-shop")
+        val span = tracer?.spanBuilder("loadProducts")
+            ?.setAttribute("component", "astronomy_shop")
+            ?.startSpan()
+        try {
+            span?.makeCurrent().use { scope ->
+                launch(OtelContext.current().asContextElement()) {
                     try {
-                        products = productCatalogClient.getProducts(otelContext)
-                        span.setAttribute("products.loaded", products.size.toLong())
+                        products = productApiService.fetchProducts()
+                        span?.setAttribute("products.loaded", products.size.toLong())
                     } catch (e: Exception) {
                         products = ArrayList<Product>()
-                    } finally {
-                       span?.end()
                     }
-                }
+                }.join()
             }
+        } finally {
+            span?.end()
+        }
     }
 
     DemoAppTheme {

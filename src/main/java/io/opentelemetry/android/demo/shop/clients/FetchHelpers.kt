@@ -27,20 +27,17 @@ class FetchHelpers {
 
         suspend fun executeRequest(request: Request): String {
             val client = OkHttpClient()
-            val tracer = GlobalOpenTelemetry.getTracer("astronomy-shop")
-            val parentContext = OtelContext.current()
+            val tracer = OtelDemoApplication.rum?.openTelemetry?.getTracer("astronomy-shop")
 
-            val span = tracer.spanBuilder("executeRequest")
-                .setParent(parentContext)
-                .startSpan()
-            span.makeCurrent()
+            val span = tracer?.spanBuilder("executeRequest")?.startSpan()
+            span?.makeCurrent()
 
             val result: Result<String> = suspendCoroutine { cont ->
                 val callback = object : Callback {
                     override fun onFailure(call: Call, e: IOException) {
-                        span.setStatus(StatusCode.ERROR)
-                        span.recordException(e)
-                        span.end()
+                        span?.setStatus(StatusCode.ERROR)
+                        span?.recordException(e)
+                        span?.end()
                         cont.resume(Result.failure(Exception("http error", e)))
                     }
 
@@ -48,21 +45,21 @@ class FetchHelpers {
                         val responseBody = response.body?.string() ?: ""
 
                         if (response.code < 200 || response.code >= 300) {
-                            span.setStatus(StatusCode.ERROR)
+                            span?.setStatus(StatusCode.ERROR)
                             val exception = Exception("error ${response.code}: $responseBody")
 
-                            span.recordException(exception,
+                            span?.recordException(exception,
                                 Attributes.builder()
                                     .put("name", "exception")
                                     .put("foo", "bar")
                                     .build())
-                            span.end()
+                            span?.end()
                             cont.resume(Result.failure(exception))
                             return
                         }
 
                         // all good? welp, end the span and return the value
-                        span.end()
+                        span?.end()
                         cont.resume(Result.success(responseBody))
                     }
                 }

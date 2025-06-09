@@ -40,7 +40,8 @@ class OtelDemoApplication : Application() {
             ?: throw IllegalStateException("SERVICE_NAME must be set in otel.properties")
         val endpoint = otelProperties.getProperty("TELEMETRY_ENDPOINT") 
             ?: throw IllegalStateException("TELEMETRY_ENDPOINT must be set in otel.properties")
-        val apiEndpoint = otelProperties.getProperty("API_ENDPOINT") 
+
+        apiEndpoint = otelProperties.getProperty("API_ENDPOINT")
             ?: throw IllegalStateException("API_ENDPOINT must be set in otel.properties")
         
         val options = HoneycombOptions.builder(this)
@@ -53,7 +54,6 @@ class OtelDemoApplication : Application() {
 
         try {
             rum = Honeycomb.configure(this, options)
-            Companion.apiEndpoint = apiEndpoint
             Log.d(TAG, "RUM session started with service: $serviceName")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize Honeycomb!", e)

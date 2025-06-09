@@ -77,6 +77,7 @@ dependencies {
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
     implementation(libs.opentelemetry.api.incubator)
+    implementation("io.opentelemetry:opentelemetry-extension-kotlin:1.47.0")
 
     testImplementation(libs.junit)
     testImplementation("org.mockito:mockito-core:5.8.0")

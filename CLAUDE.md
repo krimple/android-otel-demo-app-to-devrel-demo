@@ -46,6 +46,7 @@ rum.access.token=your_honeycomb_api_key
 - **Service Name**: "android-otel-demo"
 - **Dual Backends**: Local Jaeger + Honeycomb.io
 - **Instrumentation Types**: Automatic (lifecycle, crashes, ANRs, slow renders) + Manual (custom spans/events)
+- **Avoid** Do not use GlobalOpenTelemetry for any API calls
 
 ### Key Components
 - **Main Flow**: `MainActivity.kt` → `AstronomyShopActivity.kt` (shopping flow)

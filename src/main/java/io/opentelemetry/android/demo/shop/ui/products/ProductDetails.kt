@@ -22,6 +22,7 @@ import io.opentelemetry.android.demo.shop.ui.cart.CartViewModel
 import io.opentelemetry.android.demo.shop.ui.components.UpPressButton
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.zIndex
+import io.opentelemetry.android.demo.shop.clients.ProductApiService
 import io.opentelemetry.android.demo.shop.clients.ProductCatalogClient
 import io.opentelemetry.android.demo.shop.clients.RecommendationService
 import io.opentelemetry.android.demo.shop.ui.components.SlowCometAnimation
@@ -43,8 +44,9 @@ fun ProductDetails(
 
     var slowRender by remember { mutableStateOf(false) }
 
-    val productsClient = ProductCatalogClient()
-    val recommendationService = remember { RecommendationService(productsClient, cartViewModel) }
+    val productCatalogClient = ProductCatalogClient()
+    val productApiService = ProductApiService()
+    val recommendationService = remember { RecommendationService(productCatalogClient, productApiService, cartViewModel) }
     val recommendedProducts = remember { recommendationService.getRecommendedProducts(product) }
     Box(
         modifier = Modifier.fillMaxSize()
