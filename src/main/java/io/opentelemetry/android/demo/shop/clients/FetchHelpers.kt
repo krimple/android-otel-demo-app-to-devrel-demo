@@ -2,6 +2,7 @@ package io.opentelemetry.android.demo.shop.clients
 
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.api.GlobalOpenTelemetry
+import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.context.Context as OtelContext
 import io.opentelemetry.context.propagation.TextMapSetter
@@ -49,7 +50,12 @@ class FetchHelpers {
                         if (response.code < 200 || response.code >= 300) {
                             span.setStatus(StatusCode.ERROR)
                             val exception = Exception("error ${response.code}: $responseBody")
-                            span.recordException(exception)
+
+                            span.recordException(exception,
+                                Attributes.builder()
+                                    .put("name", "exception")
+                                    .put("foo", "bar")
+                                    .build())
                             span.end()
                             cont.resume(Result.failure(exception))
                             return
@@ -61,15 +67,15 @@ class FetchHelpers {
                     }
                 }
 
-                val builder = request.newBuilder()
-                OtelDemoApplication.rum?.openTelemetry?.propagators?.textMapPropagator?.inject(
-                    OtelContext.current(),
-                    builder,
-                    TEXT_MAP_SETTER
-                )
+//                val builder = OkHttpClient.Builder()
+//                OtelDemoApplication.rum?.openTelemetry?.propagators?.textMapPropagator?.inject(
+//                    OtelContext.current(),
+//                    builder,
+//                    TEXT_MAP_SETTER
+//                )
 
-                val requestWithHeaders = builder.build()
-                client.newCall(requestWithHeaders).enqueue(callback)
+                // val requestWithHeaders = builder.build()
+                client.newCall(request).enqueue(callback)
             }
             
             return result.getOrThrow()
