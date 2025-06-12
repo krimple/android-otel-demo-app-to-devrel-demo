@@ -18,7 +18,7 @@ class CheckoutApiService(
 ) {
     companion object {
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
-        private val tracer = OtelDemoApplication.tracer("telescope-shop")
+        private val tracer = OtelDemoApplication.tracer("astronomy-shop")
     }
 
     suspend fun placeOrder(

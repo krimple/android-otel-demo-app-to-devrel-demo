@@ -5,16 +5,19 @@ import com.google.gson.reflect.TypeToken
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.api.trace.StatusCode
+import io.opentelemetry.context.Context
 import okhttp3.Request
 import android.util.Log
 
 class ProductApiService(
 ) {
-    suspend fun fetchProducts(): List<Product> {
-        val tracer = OtelDemoApplication.rum?.openTelemetry?.getTracer("astronomy-shop")
+    suspend fun fetchProducts(parentContext: Context = Context.current()): List<Product> {
+        val tracer = OtelDemoApplication.tracer("astronomy-shop")
         Log.d("otel.demo", "Tracer obtained: $tracer")
 
-        val span = tracer?.spanBuilder("fetchProducts")?.startSpan()
+        val span = tracer?.spanBuilder("fetchProducts")
+            ?.setParent(parentContext)
+            ?.startSpan()
         Log.d("otel.demo", "Span created: $span");
         return try {
             span?.makeCurrent().use {
@@ -44,11 +47,12 @@ class ProductApiService(
         }
     }
 
-    suspend fun fetchProduct(productId: String): Product {
-        val tracer = OtelDemoApplication.rum?.openTelemetry?.getTracer("astronomy-shop")
+    suspend fun fetchProduct(productId: String, parentContext: Context = Context.current()): Product {
+        val tracer = OtelDemoApplication.tracer("astronomy-shop")
         Log.d("otel.demo", "Fetching individual product: $productId")
 
         val span = tracer?.spanBuilder("fetchProduct")
+            ?.setParent(parentContext)
             ?.setAttribute("product.id", productId)
             ?.startSpan()
 

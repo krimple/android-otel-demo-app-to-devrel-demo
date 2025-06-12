@@ -39,6 +39,8 @@ import io.opentelemetry.android.demo.shop.ui.cart.CheckoutInfoViewModel
 import io.opentelemetry.android.demo.shop.ui.cart.InfoScreen
 import io.opentelemetry.android.demo.shop.ui.products.ProductDetails
 import io.opentelemetry.android.demo.shop.ui.products.ProductList
+import io.opentelemetry.android.demo.shop.ui.products.ProductListViewModel
+import io.opentelemetry.android.demo.shop.ui.products.ProductDetailViewModel
 import io.opentelemetry.android.demo.theme.DemoAppTheme
 import io.opentelemetry.api.common.AttributeKey.doubleKey
 import io.opentelemetry.api.common.AttributeKey.stringKey
@@ -55,35 +57,13 @@ class AstronomyShopActivity : AppCompatActivity() {
 @Composable
 fun AstronomyShopScreen() {
     val context = LocalContext.current
-    val productApiService = remember { ProductApiService() }
     val checkoutApiService = remember { CheckoutApiService() }
-    var products by remember { mutableStateOf(emptyList<Product>()) }
     val astronomyShopNavController = rememberAstronomyShopNavController()
     val cartViewModel: CartViewModel = viewModel()
     val checkoutInfoViewModel: CheckoutInfoViewModel = viewModel()
+    val productListViewModel: ProductListViewModel = viewModel()
+    val productDetailViewModel: ProductDetailViewModel = viewModel()
     val coroutineScope = rememberCoroutineScope()
-
-    // TODO if we don't get a span builder, won't this cease to send data?
-    // or is this a situation where the span builder would just return an
-    // invalid span that won't do anything?
-    LaunchedEffect(Unit) {
-        val tracer = OtelDemoApplication.tracer("astronomy-shop")
-        val span = tracer?.spanBuilder("loadProducts")
-            ?.setAttribute("component", "astronomy_shop")
-            ?.startSpan()
-        
-        span?.makeCurrent().use {
-            try {
-                products = productApiService.fetchProducts()
-                span?.setAttribute("products.loaded", products.size.toLong())
-            } catch (e: Exception) {
-                span?.recordException(e)
-                products = ArrayList<Product>()
-            } finally {
-                span?.end()
-            }
-        }
-    }
 
     DemoAppTheme {
         Surface(
@@ -113,9 +93,12 @@ fun AstronomyShopScreen() {
                     Modifier.padding(innerPadding)
                 ) {
                     composable(BottomNavItem.List.route) {
-                        ProductList(products = products) { productId ->
-                            astronomyShopNavController.navigateToProductDetail(productId)
-                        }
+                        ProductList(
+                            productListViewModel = productListViewModel,
+                            onProductClick = { productId ->
+                                astronomyShopNavController.navigateToProductDetail(productId)
+                            }
+                        )
                     }
                     composable(BottomNavItem.Cart.route) {
                         CartScreen(cartViewModel = cartViewModel, onCheckoutClick = {astronomyShopNavController.navigateToCheckoutInfo()},  onProductClick = { productId ->
@@ -124,15 +107,16 @@ fun AstronomyShopScreen() {
                     }
                     composable("${MainDestinations.PRODUCT_DETAIL_ROUTE}/{${MainDestinations.PRODUCT_ID_KEY}}") { backStackEntry ->
                         val productId = backStackEntry.arguments?.getString(MainDestinations.PRODUCT_ID_KEY)
-                        val product = products.find { it.id == productId }
-                        product?.let { ProductDetails(
-                            product = it,
-                            cartViewModel,
-                            upPress = {astronomyShopNavController.upPress()},
-                            onProductClick = { productId ->
-                                astronomyShopNavController.navigateToProductDetail(productId)
-                            }
-                        )
+                        productId?.let { id ->
+                            ProductDetails(
+                                productId = id,
+                                productDetailViewModel = productDetailViewModel,
+                                cartViewModel = cartViewModel,
+                                upPress = { astronomyShopNavController.upPress() },
+                                onProductClick = { productId ->
+                                    astronomyShopNavController.navigateToProductDetail(productId)
+                                }
+                            )
                         }
                     }
                     composable(MainDestinations.CHECKOUT_INFO_ROUTE) {

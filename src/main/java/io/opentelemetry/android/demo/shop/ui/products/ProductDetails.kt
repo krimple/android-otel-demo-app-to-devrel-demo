@@ -6,6 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -13,15 +14,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
+import androidx.lifecycle.viewmodel.compose.viewModel
 import io.opentelemetry.android.demo.shop.clients.ImageLoader
 import io.opentelemetry.android.demo.gothamFont
 import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.android.demo.shop.ui.components.QuantityChooser
-import androidx.lifecycle.viewmodel.compose.viewModel
 import io.opentelemetry.android.demo.shop.ui.cart.CartViewModel
 import io.opentelemetry.android.demo.shop.ui.components.UpPressButton
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.zIndex
 import io.opentelemetry.android.demo.shop.clients.ProductApiService
 import io.opentelemetry.android.demo.shop.clients.ProductCatalogClient
 import io.opentelemetry.android.demo.shop.clients.RecommendationService
@@ -32,73 +32,132 @@ import java.util.concurrent.TimeUnit
 
 @Composable
 fun ProductDetails(
-    product: Product,
+    productId: String,
+    productDetailViewModel: ProductDetailViewModel = viewModel(),
     cartViewModel: CartViewModel = viewModel(),
     onProductClick: (String) -> Unit,
     upPress: () -> Unit
 ) {
     val context = LocalContext.current
     val imageLoader = ImageLoader(context)
-    val sourceProductImage = imageLoader.load(product.picture)
     var quantity by remember { mutableIntStateOf(1) }
-
     var slowRender by remember { mutableStateOf(false) }
 
-    val productCatalogClient = ProductCatalogClient()
-    val productApiService = ProductApiService()
-    val recommendationService = remember { RecommendationService(productCatalogClient, productApiService, cartViewModel) }
-    val recommendedProducts = remember { recommendationService.getRecommendedProducts(product) }
+    val uiState by productDetailViewModel.uiState.collectAsState()
+
+    // Load product when productId changes
+    LaunchedEffect(productId) {
+        productDetailViewModel.loadProduct(productId)
+    }
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
-        ) {
-            Image(
-                bitmap = sourceProductImage.asImageBitmap(),
-                contentDescription = product.name,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = product.name,
-                fontFamily = gothamFont,
-                fontSize = 24.sp,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = product.description,
-                color = Color.Gray,
-                textAlign = TextAlign.Justify,
-                fontFamily = gothamFont,
-                fontSize = 16.sp,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "$${product.priceValue()}",
-                fontFamily = gothamFont,
-                fontSize = 24.sp,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Center
-            )
-            Spacer(modifier = Modifier.height(32.dp))
-            QuantityChooser(quantity = quantity, onQuantityChange = { quantity = it })
-            Spacer(modifier = Modifier.height(16.dp))
-            AddToCartButton(
-                cartViewModel = cartViewModel,
-                product = product,
-                quantity = quantity,
-                onSlowRenderChange = { slowRender = it })
-            Spacer(modifier = Modifier.height(32.dp))
-            RecommendedSection(recommendedProducts = recommendedProducts, onProductClick = onProductClick)
+        when {
+            uiState.isLoading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            uiState.errorMessage != null -> {
+                val errorMessage = uiState.errorMessage
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "Error loading product",
+                        fontFamily = gothamFont,
+                        fontSize = 20.sp,
+                        color = Color.Red
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = errorMessage ?: "Unknown error",
+                        fontFamily = gothamFont,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { productDetailViewModel.refreshProduct(productId) }
+                    ) {
+                        Text("Retry")
+                    }
+                }
+            }
+
+            uiState.product != null -> {
+                val product = uiState.product!!
+                val sourceProductImage = imageLoader.load(product.picture)
+
+                // Initialize recommendation service with the loaded product
+                val productCatalogClient = ProductCatalogClient()
+                val productApiService = ProductApiService()
+                val recommendationService = remember(product) {
+                    RecommendationService(productCatalogClient, productApiService, cartViewModel)
+                }
+                val recommendedProducts = remember(product) {
+                    recommendationService.getRecommendedProducts(product)
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Image(
+                        bitmap = sourceProductImage.asImageBitmap(),
+                        contentDescription = product.name,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(300.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = product.name,
+                        fontFamily = gothamFont,
+                        fontSize = 24.sp,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = product.description,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Justify,
+                        fontFamily = gothamFont,
+                        fontSize = 16.sp,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "$${product.priceValue()}",
+                        fontFamily = gothamFont,
+                        fontSize = 24.sp,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(32.dp))
+                    QuantityChooser(quantity = quantity, onQuantityChange = { quantity = it })
+                    Spacer(modifier = Modifier.height(16.dp))
+                    AddToCartButton(
+                        cartViewModel = cartViewModel,
+                        product = product,
+                        quantity = quantity,
+                        onSlowRenderChange = { slowRender = it }
+                    )
+                    Spacer(modifier = Modifier.height(32.dp))
+                    RecommendedSection(recommendedProducts = recommendedProducts, onProductClick = onProductClick)
+                }
+            }
         }
 
         UpPressButton(

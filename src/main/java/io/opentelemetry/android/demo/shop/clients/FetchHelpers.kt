@@ -24,8 +24,6 @@ class OkHttpTextMapSetter : TextMapSetter<Request.Builder> {
 
 class FetchHelpers {
     companion object {
-        private val TEXT_MAP_SETTER: TextMapSetter<Request.Builder> = OkHttpTextMapSetter()
-
         suspend fun executeRequest(request: Request): String {
             val client = OkHttpClient()
             val tracer = OtelDemoApplication.rum?.openTelemetry?.getTracer("astronomy-shop")

@@ -8,6 +8,7 @@ import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.api.common.AttributeKey.longKey
 import io.opentelemetry.api.common.AttributeKey.stringKey
 import io.opentelemetry.api.trace.StatusCode
+import io.opentelemetry.context.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,7 +28,7 @@ class ProductListViewModel(
     val uiState: StateFlow<ProductListUiState> = _uiState.asStateFlow()
     
     init {
-        loadProducts()
+        //loadProducts()
     }
     
     fun refreshProducts() {
@@ -35,24 +36,27 @@ class ProductListViewModel(
     }
     
     private fun loadProducts(isRefresh: Boolean = false) {
-        val tracer = OtelDemoApplication.tracer("product-list")
+        val tracer = OtelDemoApplication.tracer("astronomy-shop")
         val span = tracer?.spanBuilder("loadProducts")
             ?.setAttribute(stringKey("component"), "product_list")
             ?.setAttribute("is_refresh", isRefresh)
+            ?.setAttribute(stringKey("user_action"), "view_product_list")
             ?.startSpan()
         
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-            
+
             try {
                 span?.makeCurrent().use {
-                    val products = productApiService.fetchProducts()
+                    val currentContext = Context.current()
+                    val products = productApiService.fetchProducts(currentContext)
                     _uiState.value = ProductListUiState(
                         products = products,
                         isLoading = false,
                         errorMessage = null
                     )
                     span?.setAttribute(longKey("products.loaded"), products.size.toLong())
+                    span?.setAttribute(stringKey("operation.result"), "success")
                 }
             } catch (e: Exception) {
                 span?.setStatus(StatusCode.ERROR)

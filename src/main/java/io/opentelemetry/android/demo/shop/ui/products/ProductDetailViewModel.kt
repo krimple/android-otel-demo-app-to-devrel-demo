@@ -7,6 +7,7 @@ import io.opentelemetry.android.demo.shop.clients.ProductApiService
 import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.api.common.AttributeKey.stringKey
 import io.opentelemetry.api.trace.StatusCode
+import io.opentelemetry.context.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,18 +27,20 @@ class ProductDetailViewModel(
     val uiState: StateFlow<ProductDetailUiState> = _uiState.asStateFlow()
     
     fun loadProduct(productId: String) {
-        val tracer = OtelDemoApplication.tracer("product-detail")
+        val tracer = OtelDemoApplication.tracer("astronomy-shop")
         val span = tracer?.spanBuilder("loadProductDetail")
             ?.setAttribute(stringKey("component"), "product_detail")
             ?.setAttribute(stringKey("product.id"), productId)
+            ?.setAttribute(stringKey("user_action"), "view_product_detail")
             ?.startSpan()
         
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-            
+
             try {
                 span?.makeCurrent().use {
-                    val product = productApiService.fetchProduct(productId)
+                    val currentContext = Context.current()
+                    val product = productApiService.fetchProduct(productId, currentContext)
                     _uiState.value = ProductDetailUiState(
                         product = product,
                         isLoading = false,
@@ -45,6 +48,7 @@ class ProductDetailViewModel(
                     )
                     span?.setAttribute(stringKey("product.name"), product.name)
                     span?.setAttribute("product.price", product.priceValue())
+                    span?.setAttribute(stringKey("operation.result"), "success")
                 }
             } catch (e: Exception) {
                 span?.setStatus(StatusCode.ERROR)
