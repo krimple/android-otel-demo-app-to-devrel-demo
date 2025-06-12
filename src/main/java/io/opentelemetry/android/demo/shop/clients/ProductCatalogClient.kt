@@ -14,4 +14,8 @@ class ProductCatalogClient {
     suspend fun getProducts(): List<Product> {
         return productApiService.fetchProducts()
     }
+
+    suspend fun getProduct(productId: String): Product {
+        return productApiService.fetchProduct(productId)
+    }
 }

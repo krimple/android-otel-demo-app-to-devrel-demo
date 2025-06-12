@@ -43,4 +43,35 @@ class ProductApiService(
             span?.end()
         }
     }
+
+    suspend fun fetchProduct(productId: String): Product {
+        val tracer = OtelDemoApplication.rum?.openTelemetry?.getTracer("astronomy-shop")
+        Log.d("otel.demo", "Fetching individual product: $productId")
+
+        val span = tracer?.spanBuilder("fetchProduct")
+            ?.setAttribute("product.id", productId)
+            ?.startSpan()
+
+        return try {
+            span?.makeCurrent().use {
+                val productUrl = "${OtelDemoApplication.apiEndpoint}/products/$productId"
+                Log.d("otel.demo", "Making request to: $productUrl")
+                val request = Request.Builder()
+                    .url(productUrl)
+                    .get().build()
+
+                val bodyText = FetchHelpers.executeRequest(request)
+                Log.d("otel.demo", "Individual product request completed successfully")
+                Gson().fromJson(bodyText, Product::class.java)
+            }
+        } catch (e: Exception) {
+            Log.d("otel.demo", "Individual product request failed: ${e.message}")
+            span?.setStatus(StatusCode.ERROR)
+            span?.recordException(e)
+            throw e
+        } finally {
+            Log.d("otel.demo", "Ending individual product span: $span")
+            span?.end()
+        }
+    }
 }
