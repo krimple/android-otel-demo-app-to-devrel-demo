@@ -14,6 +14,9 @@ import org.junit.Assert.*
 import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
+import org.mockito.kotlin.any
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 
@@ -68,6 +71,7 @@ class ProductListViewModelTest {
         whenever(productApiService.fetchProducts()).thenReturn(mockProducts)
         
         viewModel = ProductListViewModel(productApiService)
+        viewModel.refreshProducts() // This will be first load (isRefresh=false)
         testDispatcher.scheduler.advanceUntilIdle()
         
         val finalState = viewModel.uiState.first()
@@ -82,6 +86,7 @@ class ProductListViewModelTest {
         whenever(productApiService.fetchProducts()).thenThrow(RuntimeException(errorMessage))
         
         viewModel = ProductListViewModel(productApiService)
+        viewModel.refreshProducts() // This will be first load (isRefresh=false)
         testDispatcher.scheduler.advanceUntilIdle()
         
         val finalState = viewModel.uiState.first()
@@ -115,5 +120,44 @@ class ProductListViewModelTest {
         val finalState = viewModel.uiState.first()
         assertFalse("Should not be loading", finalState.isLoading)
         assertEquals("Should have correct products", mockProducts, finalState.products)
+    }
+
+    @Test
+    fun `first refresh loads with isRefresh false, subsequent refreshes use isRefresh true`() = runTest {
+        val mockProducts = listOf(
+            Product(
+                id = "1",
+                name = "Test Product",
+                description = "Test Description",
+                picture = "test.jpg",
+                priceUsd = PriceUsd("USD", 10, 0),
+                categories = listOf("test")
+            )
+        )
+        
+        whenever(productApiService.fetchProducts()).thenReturn(mockProducts)
+        
+        viewModel = ProductListViewModel(productApiService)
+        
+        // First call should be initial load (isRefresh=false)
+        viewModel.refreshProducts()
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        // Verify products loaded successfully
+        val firstState = viewModel.uiState.first()
+        assertFalse("Should not be loading after first call", firstState.isLoading)
+        assertEquals("Should have products after first call", mockProducts, firstState.products)
+        
+        // Second call should be refresh (isRefresh=true)
+        viewModel.refreshProducts()
+        testDispatcher.scheduler.advanceUntilIdle()
+        
+        // Verify products still loaded successfully
+        val secondState = viewModel.uiState.first()
+        assertFalse("Should not be loading after second call", secondState.isLoading)
+        assertEquals("Should still have products after refresh", mockProducts, secondState.products)
+        
+        // Verify API was called twice (once for initial load, once for refresh)
+        verify(productApiService, times(2)).fetchProducts(any())
     }
 }

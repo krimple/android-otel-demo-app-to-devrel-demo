@@ -27,12 +27,15 @@ class ProductListViewModel(
     private val _uiState = MutableStateFlow(ProductListUiState())
     val uiState: StateFlow<ProductListUiState> = _uiState.asStateFlow()
     
-    init {
-        //loadProducts()
-    }
+    private var hasLoadedOnce = false
     
     fun refreshProducts() {
-        loadProducts(isRefresh = true)
+        if (hasLoadedOnce) {
+            loadProducts(isRefresh = true)
+        } else {
+            loadProducts(isRefresh = false)
+            hasLoadedOnce = true
+        }
     }
     
     private fun loadProducts(isRefresh: Boolean = false) {
