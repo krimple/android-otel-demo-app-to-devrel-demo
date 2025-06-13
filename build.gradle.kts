@@ -75,6 +75,8 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.gson)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.material)

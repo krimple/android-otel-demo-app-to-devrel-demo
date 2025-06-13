@@ -1,7 +1,7 @@
 package io.opentelemetry.android.demo.shop.ui.products
 
-import android.graphics.Bitmap
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
+import coil3.compose.AsyncImage
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,8 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -33,9 +32,7 @@ fun ProductCard(
     modifier: Modifier = Modifier,
     isNarrow: Boolean = false
 ) {
-    val imageLoader = ImageLoader(LocalContext.current)
-    val sourceProductImage = imageLoader.load(product.picture)
-    Bitmap.createScaledBitmap(sourceProductImage, 120, 120, false)
+    val imageUrl = ImageLoader.getImageUrl(product.picture)
 
     val cardColors = CardColors(
         containerColor = Color.White, contentColor = Color.Black,
@@ -56,9 +53,11 @@ fun ProductCard(
             .padding(20.dp)) {
             Row(modifier = Modifier.fillMaxWidth()) {
                 Column {
-                    Image(
-                        bitmap = sourceProductImage.asImageBitmap(),
+                    AsyncImage(
+                        model = imageUrl,
                         contentDescription = product.name,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.size(120.dp)
                     )
                 }
                 Column(modifier = Modifier.fillMaxWidth()) {
