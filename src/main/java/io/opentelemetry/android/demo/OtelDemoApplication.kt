@@ -12,7 +12,6 @@ import java.util.Properties
 import io.honeycomb.opentelemetry.android.Honeycomb
 import io.honeycomb.opentelemetry.android.HoneycombOptions
 import io.opentelemetry.android.OpenTelemetryRum
-import io.opentelemetry.api.incubator.logs.ExtendedLogRecordBuilder
 import io.opentelemetry.api.logs.LogRecordBuilder
 import io.opentelemetry.api.metrics.LongCounter
 import io.opentelemetry.api.trace.Tracer
@@ -34,11 +33,19 @@ class OtelDemoApplication : Application() {
             Log.w(TAG, "No otel.properties file found in assets, using defaults")
         }
         
-        val apiKey = otelProperties.getProperty("HONEYCOMB_API_KEY") ?: getString(R.string.rum_access_token)
-        val serviceName = otelProperties.getProperty("SERVICE_NAME") ?: "android-otel-demo"
+        val apiKey = otelProperties.getProperty("HONEYCOMB_API_KEY") 
+            ?: throw IllegalStateException("HONEYCOMB_API_KEY must be set in otel.properties")
+        val serviceName = otelProperties.getProperty("SERVICE_NAME") 
+            ?: throw IllegalStateException("SERVICE_NAME must be set in otel.properties")
+        val endpoint = otelProperties.getProperty("TELEMETRY_ENDPOINT") 
+            ?: throw IllegalStateException("TELEMETRY_ENDPOINT must be set in otel.properties")
+
+        apiEndpoint = otelProperties.getProperty("API_ENDPOINT")
+            ?: throw IllegalStateException("API_ENDPOINT must be set in otel.properties")
         
         val options = HoneycombOptions.builder(this)
             .setApiKey(apiKey)
+            .setApiEndpoint(endpoint)
             .setServiceName(serviceName)
             .setServiceVersion("1.0")
             .setDebug(true)
@@ -55,19 +62,20 @@ class OtelDemoApplication : Application() {
 
     companion object {
         var rum: OpenTelemetryRum? = null
+        var apiEndpoint: String = "https://www.zurelia.honeydemo.io/api"
 
         fun tracer(name: String): Tracer? {
-            return rum?.openTelemetry?.getTracer(name)
+            val tracer = rum?.openTelemetry?.getTracer(name, "1.0.0")
+            Log.d(TAG, "Getting tracer for scope: $name, tracer: $tracer")
+            return tracer
         }
 
         fun counter(name: String): LongCounter? {
-            // TODO: Access metrics through Honeycomb SDK
-            return null
+            return rum?.openTelemetry?.getMeter("otel.demo.app")?.counterBuilder(name)?.build()
         }
 
         fun eventBuilder(scopeName: String, eventName: String): LogRecordBuilder? {
-            // TODO: Access logging through Honeycomb SDK
-            return null
+            return rum?.openTelemetry?.getLogsBridge()?.get(scopeName)?.logRecordBuilder()?.setBody(eventName)
         }
     }
 }

@@ -2,9 +2,12 @@ package io.opentelemetry.android.demo.shop.clients
 
 import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.android.demo.shop.ui.cart.CartViewModel
+import io.opentelemetry.context.Context as OtelContext
+
 
 class RecommendationService(
     private val productCatalogClient: ProductCatalogClient,
+    private val productApiService: ProductApiService,
     private val cartViewModel: CartViewModel
 ) {
 
@@ -18,7 +21,9 @@ class RecommendationService(
     }
 
     private fun getAllNonCartProducts(): List<Product>{
-        val allProducts = productCatalogClient.get()
+        // val otelContext = OtelContext.current()
+        // TODO make this work - launch properly
+        val allProducts = ArrayList<Product>();// productApiService.fetchProducts()
         val cartItems = cartViewModel.cartItems.value
 
         return allProducts.filter { product -> cartItems.none { it.product.id == product.id } }

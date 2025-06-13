@@ -1,31 +1,81 @@
 package io.opentelemetry.android.demo.shop.clients
 
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.model.Product
-import io.opentelemetry.android.demo.shop.model.ProductDeserializationWrapper
-import io.opentelemetry.api.trace.Tracer
+import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.context.Context
 import okhttp3.Request
+import android.util.Log
 
 class ProductApiService(
-    private val httpClient: okhttp3.OkHttpClient,
-    private val tracer: Tracer
 ) {
-    companion object {
-        private const val PRODUCTS_API_URL = "https://www.zurelia.honeydemo.io/api/products"
+    suspend fun fetchProducts(parentContext: Context = Context.current()): List<Product> {
+        val tracer = OtelDemoApplication.tracer("astronomy-shop")
+        Log.d("otel.demo", "Tracer obtained: $tracer")
+
+        val span = tracer?.spanBuilder("fetchProducts")
+            ?.setParent(parentContext)
+            ?.startSpan()
+        Log.d("otel.demo", "Span created: $span");
+        return try {
+            span?.makeCurrent().use {
+                val productsUrl = "${OtelDemoApplication.apiEndpoint}/products"
+                Log.d("otel.demo", "Making request to: $productsUrl")
+                val request = Request.Builder()
+                    .url(productsUrl)
+                    .get().build()
+
+                val bodyText = FetchHelpers.executeRequest(request)
+                val listType = object : TypeToken<List<Product>>() {}.type
+                Log.d("otel.demo", "Request completed successfully")
+                // implict return is last statement in method in Kotlin so it is for the try
+                Gson().fromJson<List<Product>>(bodyText, listType)
+            }
+        } catch (e: Exception) {
+            Log.d("otel.demo", "Request failed with exception: ${e.message}")
+            // do I need both??
+            span?.setStatus(StatusCode.ERROR)
+            span?.recordException(e)
+            // TODO - do we need this call?
+            // Honeycomb.logException(, e)
+            throw e
+        } finally {
+            Log.d("otel.demo", "Ending span: $span")
+            span?.end()
+        }
     }
 
-    suspend fun fetchProducts(parentContext: Context = Context.current()): List<Product> {
-        val request = Request.Builder()
-            .url(PRODUCTS_API_URL)
-            .get()
-            .build()
+    suspend fun fetchProduct(productId: String, parentContext: Context = Context.current()): Product {
+        val tracer = OtelDemoApplication.tracer("astronomy-shop")
+        Log.d("otel.demo", "Fetching individual product: $productId")
 
-        val bodyText = FetchHelpers.executeRequest(request)
-        val parsedBody = Gson().fromJson(
-            bodyText,
-            ProductDeserializationWrapper::class.java
-        )
-        return parsedBody.products
+        val span = tracer?.spanBuilder("fetchProduct")
+            ?.setParent(parentContext)
+            ?.setAttribute("product.id", productId)
+            ?.startSpan()
+
+        return try {
+            span?.makeCurrent().use {
+                val productUrl = "${OtelDemoApplication.apiEndpoint}/products/$productId"
+                Log.d("otel.demo", "Making request to: $productUrl")
+                val request = Request.Builder()
+                    .url(productUrl)
+                    .get().build()
+
+                val bodyText = FetchHelpers.executeRequest(request)
+                Log.d("otel.demo", "Individual product request completed successfully")
+                Gson().fromJson(bodyText, Product::class.java)
+            }
+        } catch (e: Exception) {
+            Log.d("otel.demo", "Individual product request failed: ${e.message}")
+            span?.setStatus(StatusCode.ERROR)
+            span?.recordException(e)
+            throw e
+        } finally {
+            Log.d("otel.demo", "Ending individual product span: $span")
+            span?.end()
+        }
     }
 }
