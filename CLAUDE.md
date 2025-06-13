@@ -52,7 +52,11 @@ rum.access.token=your_honeycomb_api_key
 - **Main Flow**: `MainActivity.kt` → `AstronomyShopActivity.kt` (shopping flow)
 - **Product Data**: `/src/main/assets/products.json` (10 astronomy products)
 - **Navigation**: Jetpack Compose with `Navigation.kt` handling screen transitions
-- **State Management**: ViewModels for cart (`CartViewModel.kt`) and checkout (`CheckoutInfoViewModel.kt`)
+- **State Management**: MVVM pattern with ViewModels:
+  - `ProductListViewModel.kt` - Product listing with lifecycle-aware loading
+  - `ProductDetailViewModel.kt` - Individual product details
+  - `CartViewModel.kt` - Shopping cart operations  
+  - `CheckoutInfoViewModel.kt` - Checkout flow management
 
 ### Demo Test Scenarios
 - **Crash**: Add exactly 10 "National Park Foundation Explorascope" items
@@ -139,3 +143,15 @@ rum.access.token=your_honeycomb_api_key
 - ✅ Service-to-service calls - maintain distributed trace context
 
 **Conclusion**: Not every span needs a parent. Root spans are correct and necessary for marking the beginning of user interactions and standalone events.
+
+## ViewModel Lifecycle Management
+
+### ProductListViewModel Behavior
+The `ProductListViewModel` implements smart loading to prevent duplicate API calls:
+
+- **First Load**: `refreshProducts()` called by UI triggers `loadProducts(isRefresh=false)`
+- **Subsequent Loads**: `refreshProducts()` called by UI triggers `loadProducts(isRefresh=true)`
+- **Internal Tracking**: `hasLoadedOnce` flag distinguishes between initial load and refresh
+- **Telemetry**: `is_refresh` attribute properly tracks user interaction patterns
+
+This prevents double-loading when UI components (like `LaunchedEffect`) automatically trigger refresh on screen load while maintaining proper telemetry distinction between first-time loading and user-initiated refreshes.
