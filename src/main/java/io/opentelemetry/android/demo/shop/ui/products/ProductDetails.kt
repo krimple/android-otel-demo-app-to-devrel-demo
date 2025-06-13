@@ -1,6 +1,6 @@
 package io.opentelemetry.android.demo.shop.ui.products
 
-import androidx.compose.foundation.Image
+import coil3.compose.AsyncImage
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -9,7 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -39,7 +39,6 @@ fun ProductDetails(
     upPress: () -> Unit
 ) {
     val context = LocalContext.current
-    val imageLoader = ImageLoader(context)
     var quantity by remember { mutableIntStateOf(1) }
     var slowRender by remember { mutableStateOf(false) }
 
@@ -95,7 +94,7 @@ fun ProductDetails(
 
             uiState.product != null -> {
                 val product = uiState.product!!
-                val sourceProductImage = imageLoader.load(product.picture)
+                val imageUrl = ImageLoader.getImageUrl(product.picture)
 
                 // Initialize recommendation service with the loaded product
                 val productCatalogClient = ProductCatalogClient()
@@ -113,9 +112,10 @@ fun ProductDetails(
                         .padding(16.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    Image(
-                        bitmap = sourceProductImage.asImageBitmap(),
+                    AsyncImage(
+                        model = imageUrl,
                         contentDescription = product.name,
+                        contentScale = ContentScale.Fit,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(300.dp)

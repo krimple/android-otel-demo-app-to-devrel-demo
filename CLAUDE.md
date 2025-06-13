@@ -75,6 +75,7 @@ rum.access.token=your_honeycomb_api_key
 - Honeycomb Android SDK (0.0.11)
 - OpenTelemetry Core (1.49.0)
 - OkHttp with auto-instrumentation
+- Coil (Image loading and caching)
 
 ## Telemetry Patterns
 
@@ -155,3 +156,27 @@ The `ProductListViewModel` implements smart loading to prevent duplicate API cal
 - **Telemetry**: `is_refresh` attribute properly tracks user interaction patterns
 
 This prevents double-loading when UI components (like `LaunchedEffect`) automatically trigger refresh on screen load while maintaining proper telemetry distinction between first-time loading and user-initiated refreshes.
+
+## Image Loading Architecture
+
+### Image Service Integration
+The app uses a unified image loading system that dynamically adapts to the current environment:
+
+- **URL Construction**: `ImageLoader.kt:getImageUrl()` constructs image URLs using the same base endpoint as the API
+- **Environment Awareness**: Images served from `/images/products/` path relative to `API_ENDPOINT` 
+- **Local Development**: `http://10.0.2.2:9191/images/products/$picture`
+- **Production**: `https://www.zurelia.honeydemo.io/images/products/$picture`
+
+### Caching Behavior
+- **Library**: Coil3 (`AsyncImage` composables) provides automatic image caching
+- **Cache Strategy**: Images cached by URL - same URL uses cached copy, different URL triggers fresh fetch
+- **Product Detail Flow**: 
+  - Product data refreshes on each navigation (API call)
+  - Images use cached copies unless filename changes
+  - Optimal balance of fresh data with efficient image loading
+
+### Components
+- **ImageLoader.kt**: Central image URL construction with environment detection
+- **ProductCard.kt**: Uses `AsyncImage` for product thumbnails in lists
+- **ProductDetails.kt**: Uses `AsyncImage` for full-size product images
+- **Telemetry**: HTTP requests for images appear in traces with proper status codes
