@@ -58,7 +58,7 @@ class AstronomyShopActivity : AppCompatActivity() {
 @Composable
 fun AstronomyShopScreen() {
     val context = LocalContext.current
-    val currencyViewModel: CurrencyViewModel = viewModel { CurrencyViewModel(context) }
+    val currencyViewModel: CurrencyViewModel = remember { CurrencyViewModel.getInstance(context) }
     val checkoutApiService = remember { CheckoutApiService() }
     val astronomyShopNavController = rememberAstronomyShopNavController()
     val cartViewModel: CartViewModel = viewModel()
@@ -97,6 +97,7 @@ fun AstronomyShopScreen() {
                     composable(BottomNavItem.List.route) {
                         ProductList(
                             productListViewModel = productListViewModel,
+                            currencyViewModel = currencyViewModel,
                             onProductClick = { productId ->
                                 astronomyShopNavController.navigateToProductDetail(productId)
                             }
@@ -114,6 +115,7 @@ fun AstronomyShopScreen() {
                                 productId = id,
                                 productDetailViewModel = productDetailViewModel,
                                 cartViewModel = cartViewModel,
+                                currencyViewModel = currencyViewModel,
                                 upPress = { astronomyShopNavController.upPress() },
                                 onProductClick = { productId ->
                                     astronomyShopNavController.navigateToProductDetail(productId)
@@ -136,7 +138,8 @@ fun AstronomyShopScreen() {
                             },
                             upPress = {astronomyShopNavController.upPress()},
                             checkoutInfoViewModel = checkoutInfoViewModel,
-                            cartViewModel = cartViewModel
+                            cartViewModel = cartViewModel,
+                            currencyViewModel = currencyViewModel
                         )
                     }
                     composable(MainDestinations.CHECKOUT_CONFIRMATION_ROUTE){

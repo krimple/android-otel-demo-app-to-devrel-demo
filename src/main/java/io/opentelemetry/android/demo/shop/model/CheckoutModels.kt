@@ -60,6 +60,13 @@ data class Money(
     }
     
     fun formatCurrency(): String {
-        return "$${String.format("%.2f", toDouble())}"
+        val value = toDouble()
+        return when (currencyCode) {
+            "USD" -> "$${String.format("%.2f", value)}"
+            "EUR" -> "€${String.format("%.2f", value)}"
+            "GBP" -> "£${String.format("%.2f", value)}"
+            "JPY" -> "¥${String.format("%.0f", value)}"
+            else -> "${currencyCode} ${String.format("%.2f", value)}"
+        }
     }
 }

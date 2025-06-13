@@ -19,10 +19,9 @@ import io.opentelemetry.android.demo.shop.ui.currency.CurrencyBottomSheet
 @Composable
 fun ProductList(
     productListViewModel: ProductListViewModel = viewModel(),
+    currencyViewModel: CurrencyViewModel,
     onProductClick: (String) -> Unit
 ) {
-    val context = LocalContext.current
-    val currencyViewModel: CurrencyViewModel = viewModel { CurrencyViewModel(context) }
     val uiState by productListViewModel.uiState.collectAsState()
     val selectedCurrency by currencyViewModel.selectedCurrency.collectAsState()
     val availableCurrencies by currencyViewModel.availableCurrencies.collectAsState()

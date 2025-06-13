@@ -18,18 +18,18 @@ class CurrencyApiService {
             ?.startSpan()
 
         return try {
-            span?.makeCurrent().use {
-                val currencyUrl = "${OtelDemoApplication.apiEndpoint}/currency"
-                Log.d("otel.demo", "Making request to: $currencyUrl")
-                val request = Request.Builder()
-                    .url(currencyUrl)
-                    .get().build()
+            val currencyUrl = "${OtelDemoApplication.apiEndpoint}/currency"
+            Log.d("otel.demo", "Making request to: $currencyUrl")
+            val request = Request.Builder()
+                .url(currencyUrl)
+                .get().build()
 
-                val bodyText = FetchHelpers.executeRequest(request)
-                val listType = object : TypeToken<List<String>>() {}.type
-                Log.d("otel.demo", "Currency request completed successfully")
-                Gson().fromJson<List<String>>(bodyText, listType)
-            }
+            val bodyText = FetchHelpers.executeRequest(request)
+            val listType = object : TypeToken<List<String>>() {}.type
+            Log.d("otel.demo", "Currency request completed successfully")
+            
+            span?.setAttribute("currencies.count", Gson().fromJson<List<String>>(bodyText, listType).size.toLong())
+            Gson().fromJson<List<String>>(bodyText, listType)
         } catch (e: Exception) {
             Log.d("otel.demo", "Currency request failed with exception: ${e.message}")
             span?.setStatus(StatusCode.ERROR)

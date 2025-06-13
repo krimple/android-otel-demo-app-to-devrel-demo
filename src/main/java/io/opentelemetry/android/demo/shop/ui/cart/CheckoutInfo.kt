@@ -79,10 +79,9 @@ fun InfoScreen(
     onPlaceOrderClick: () -> Unit,
     upPress: () -> Unit,
     checkoutInfoViewModel: CheckoutInfoViewModel,
-    cartViewModel: CartViewModel
+    cartViewModel: CartViewModel,
+    currencyViewModel: CurrencyViewModel
 ) {
-    val context = LocalContext.current
-    val currencyViewModel: CurrencyViewModel = viewModel { CurrencyViewModel(context) }
     val selectedCurrency by currencyViewModel.selectedCurrency.collectAsState()
     
     val shippingInfo = checkoutInfoViewModel.shippingInfo
@@ -183,7 +182,7 @@ fun InfoScreen(
                         }
                         
                         Spacer(modifier = Modifier.height(8.dp))
-                        Divider()
+                        HorizontalDivider()
                         Spacer(modifier = Modifier.height(8.dp))
                         
                         // Total

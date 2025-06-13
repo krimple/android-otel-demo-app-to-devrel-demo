@@ -32,12 +32,13 @@ class ShippingApiService {
             ?.setAttribute("shipping.items.count", cartViewModel.cartItems.value.size.toLong())
             ?.startSpan()
 
+        // Use checkout API as preview to get shipping cost
+        val shippingInfo = checkoutInfoViewModel.shippingInfo
+        val cartItems = cartViewModel.cartItems.value
+        val checkoutUrl = "${OtelDemoApplication.apiEndpoint}/checkout?currencyCode=$currencyCode"
+
         return try {
             span?.makeCurrent().use {
-                // Use checkout API as preview to get shipping cost
-                val shippingInfo = checkoutInfoViewModel.shippingInfo
-                val cartItems = cartViewModel.cartItems.value
-
                 // Create a preview checkout request (we won't actually process payment)
                 val checkoutRequest = CheckoutRequest(
                     userId = "shipping-preview",
@@ -65,7 +66,6 @@ class ShippingApiService {
                 )
 
                 val requestBody = Gson().toJson(checkoutRequest)
-                val checkoutUrl = "${OtelDemoApplication.apiEndpoint}/checkout?currencyCode=$currencyCode"
                 Log.d("otel.demo", "Making shipping preview request to: $checkoutUrl")
 
                 val request = Request.Builder()
@@ -85,9 +85,14 @@ class ShippingApiService {
                 checkoutResponse.shippingCost
             }
         } catch (e: Exception) {
-            Log.d("otel.demo", "Shipping preview request failed with exception: ${e.message}")
             span?.setStatus(StatusCode.ERROR)
             span?.recordException(e)
+            span?.setAttribute("shipping.calculation.failed", true)
+            span?.setAttribute("shipping.calculation.error.type", e.javaClass.simpleName)
+            span?.setAttribute("shipping.calculation.error.message", e.message ?: "Unknown error")
+            span?.setAttribute("shipping.calculation.request.url", checkoutUrl)
+            span?.setAttribute("shipping.calculation.fallback.cost", 0.0)
+            Log.d("otel.demo", "Shipping preview request failed, returning zero cost fallback")
             // Return zero cost as fallback
             Money(currencyCode = currencyCode, units = 0, nanos = 0)
         } finally {

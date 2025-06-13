@@ -41,11 +41,11 @@ fun ProductDetails(
     productId: String,
     productDetailViewModel: ProductDetailViewModel = viewModel(),
     cartViewModel: CartViewModel = viewModel(),
+    currencyViewModel: CurrencyViewModel,
     onProductClick: (String) -> Unit,
     upPress: () -> Unit
 ) {
     val context = LocalContext.current
-    val currencyViewModel: CurrencyViewModel = viewModel { CurrencyViewModel(context) }
     var quantity by remember { mutableIntStateOf(1) }
     var slowRender by remember { mutableStateOf(false) }
     var showCurrencyBottomSheet by remember { mutableStateOf(false) }

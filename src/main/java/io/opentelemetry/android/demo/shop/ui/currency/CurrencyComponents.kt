@@ -75,7 +75,7 @@ fun CurrencyToggle(
                 )
             }
             
-            Divider()
+            HorizontalDivider()
             
             // More currencies option
             DropdownMenuItem(

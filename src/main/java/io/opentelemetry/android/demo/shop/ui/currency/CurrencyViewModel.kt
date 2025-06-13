@@ -26,8 +26,22 @@ class CurrencyViewModel(private val context: Context? = null) : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    companion object {
+        @Volatile
+        private var INSTANCE: CurrencyViewModel? = null
+        
+        fun getInstance(context: Context): CurrencyViewModel {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: CurrencyViewModel(context).also { 
+                    INSTANCE = it
+                    it.loadCurrencies()
+                }
+            }
+        }
+    }
+
     init {
-        loadCurrencies()
+        // Don't auto-load currencies here anymore - controlled by singleton
     }
 
     private fun getSavedCurrency(): String {
@@ -43,6 +57,11 @@ class CurrencyViewModel(private val context: Context? = null) : ViewModel() {
     }
 
     private fun loadCurrencies() {
+        if (_availableCurrencies.value.isNotEmpty() || _isLoading.value) {
+            Log.d("otel.demo", "Currencies already loaded or loading, skipping duplicate call")
+            return
+        }
+        
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null

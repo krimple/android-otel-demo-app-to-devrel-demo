@@ -123,6 +123,68 @@ User Session (Root)
 - **Child Spans**: API calls, background operations triggered by user actions
 - **Context Passing**: Explicit `Context.current()` usage in service calls
 
+### Resource Management with Use Blocks
+
+The application employs Kotlin's `use` blocks for automatic resource management, particularly for OpenTelemetry spans:
+
+#### Pattern Implementation
+```kotlin
+// Automatic span lifecycle management
+tracer.spanBuilder("operation-name")
+    .startSpan()
+    .use { span ->
+        // Span is automatically closed when block exits
+        span.setAttribute("key", "value")
+        span.setStatus(StatusCode.OK)
+        // Perform operation
+        return result
+    }
+```
+
+#### Benefits
+- **Automatic Cleanup**: Spans are guaranteed to be closed even if exceptions occur
+- **Exception Safety**: Proper span status setting on both success and failure paths
+- **Resource Efficiency**: Prevents span leaks and ensures proper telemetry data
+- **Code Clarity**: Clear scope boundaries for telemetry operations
+
+#### Usage Patterns
+- **API Service Calls**: All HTTP operations wrapped in use blocks for span management
+- **ViewModel Operations**: Business logic operations with proper span lifecycle
+- **Background Tasks**: Long-running operations with guaranteed span closure
+- **Error Handling**: Automatic span status setting on exceptions
+
+#### Implementation Examples
+```kotlin
+// In API services
+suspend fun fetchProducts(): List<Product> {
+    return tracer.spanBuilder("fetchProducts")
+        .startSpan()
+        .use { span ->
+            span.setAttribute("operation", "product_fetch")
+            // HTTP call automatically instrumented
+            apiClient.getProducts()
+        }
+}
+
+// In ViewModels
+fun loadData() {
+    tracer.spanBuilder("loadData")
+        .startSpan()
+        .use { span ->
+            span.setAttribute("user_action", "data_load")
+            try {
+                // Business logic
+                span.setStatus(StatusCode.OK)
+            } catch (e: Exception) {
+                span.setStatus(StatusCode.ERROR, e.message)
+                throw e
+            }
+        }
+}
+```
+
+This pattern ensures robust telemetry collection while maintaining clean, readable code that automatically handles resource cleanup.
+
 ## Data Flow
 
 ### Product Loading Flow
