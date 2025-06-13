@@ -1,6 +1,8 @@
 package io.opentelemetry.android.demo.shop.ui.products
 
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.CachePolicy
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -113,7 +115,11 @@ fun ProductDetails(
                         .verticalScroll(rememberScrollState())
                 ) {
                     AsyncImage(
-                        model = imageUrl,
+                        model = ImageRequest.Builder(context)
+                            .data(imageUrl)
+                            .memoryCachePolicy(CachePolicy.DISABLED)
+                            .diskCachePolicy(CachePolicy.DISABLED)
+                            .build(),
                         contentDescription = product.name,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier

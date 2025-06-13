@@ -168,12 +168,12 @@ The app uses a unified image loading system that dynamically adapts to the curre
 - **Production**: `https://www.zurelia.honeydemo.io/images/products/$picture`
 
 ### Caching Behavior
-- **Library**: Coil3 (`AsyncImage` composables) provides automatic image caching
-- **Cache Strategy**: Images cached by URL - same URL uses cached copy, different URL triggers fresh fetch
+- **Library**: Coil3 (`AsyncImage` composables) with caching disabled
+- **Cache Strategy**: Both memory and disk caching disabled to ensure fresh image fetches
 - **Product Detail Flow**: 
   - Product data refreshes on each navigation (API call)
-  - Images use cached copies unless filename changes
-  - Optimal balance of fresh data with efficient image loading
+  - Images are re-fetched on every display for real-time updates
+  - Prioritizes fresh content over performance optimization
 
 ### Components
 - **ImageLoader.kt**: Central image URL construction with environment detection

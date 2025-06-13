@@ -2,6 +2,8 @@ package io.opentelemetry.android.demo.shop.ui.products
 
 import androidx.compose.foundation.layout.size
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.CachePolicy
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -32,6 +35,7 @@ fun ProductCard(
     modifier: Modifier = Modifier,
     isNarrow: Boolean = false
 ) {
+    val context = LocalContext.current
     val imageUrl = ImageLoader.getImageUrl(product.picture)
 
     val cardColors = CardColors(
@@ -54,7 +58,11 @@ fun ProductCard(
             Row(modifier = Modifier.fillMaxWidth()) {
                 Column {
                     AsyncImage(
-                        model = imageUrl,
+                        model = ImageRequest.Builder(context)
+                            .data(imageUrl)
+                            .memoryCachePolicy(CachePolicy.DISABLED)
+                            .diskCachePolicy(CachePolicy.DISABLED)
+                            .build(),
                         contentDescription = product.name,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier.size(120.dp)
