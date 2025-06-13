@@ -29,20 +29,21 @@ class ProductListViewModel(
     
     private var hasLoadedOnce = false
     
-    fun refreshProducts() {
+    fun refreshProducts(currencyCode: String = "USD") {
         if (hasLoadedOnce) {
-            loadProducts(isRefresh = true)
+            loadProducts(currencyCode, isRefresh = true)
         } else {
-            loadProducts(isRefresh = false)
+            loadProducts(currencyCode, isRefresh = false)
             hasLoadedOnce = true
         }
     }
     
-    private fun loadProducts(isRefresh: Boolean = false) {
+    private fun loadProducts(currencyCode: String = "USD", isRefresh: Boolean = false) {
         val tracer = OtelDemoApplication.tracer("astronomy-shop")
         val span = tracer?.spanBuilder("loadProducts")
             ?.setAttribute(stringKey("component"), "product_list")
             ?.setAttribute("is_refresh", isRefresh)
+            ?.setAttribute(stringKey("currency.code"), currencyCode)
             ?.setAttribute(stringKey("user_action"), "view_product_list")
             ?.startSpan()
         
@@ -52,7 +53,7 @@ class ProductListViewModel(
             try {
                 span?.makeCurrent().use {
                     val currentContext = Context.current()
-                    val products = productApiService.fetchProducts(currentContext)
+                    val products = productApiService.fetchProducts(currencyCode, currentContext)
                     _uiState.value = ProductListUiState(
                         products = products,
                         isLoading = false,

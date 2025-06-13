@@ -70,6 +70,36 @@ class ProductApiServiceTest {
     }
 
     @Test
+    fun `fetchProducts supports currency parameter`() = runTest {
+        val service = ProductApiService()
+        
+        // Test that fetchProducts method supports currency parameter
+        val methods = service::class.java.methods.filter { it.name == "fetchProducts" }
+        assertFalse("fetchProducts methods should exist", methods.isEmpty())
+        
+        // Verify there's a method that takes currencyCode parameter
+        val methodWithCurrency = methods.find { method ->
+            method.parameterTypes.any { it == String::class.java }
+        }
+        assertNotNull("fetchProducts should support currency parameter", methodWithCurrency)
+    }
+
+    @Test
+    fun `fetchProduct supports currency parameter`() = runTest {
+        val service = ProductApiService()
+        
+        // Test that fetchProduct method supports currency parameter
+        val methods = service::class.java.methods.filter { it.name == "fetchProduct" }
+        assertFalse("fetchProduct methods should exist", methods.isEmpty())
+        
+        // Should have at least 2 String parameters (productId and currencyCode)
+        val methodWithCurrency = methods.find { method ->
+            method.parameterTypes.count { it == String::class.java } >= 2
+        }
+        assertNotNull("fetchProduct should support currency parameter", methodWithCurrency)
+    }
+
+    @Test
     fun `service uses proper observability patterns`() = runTest {
         val service = ProductApiService()
 

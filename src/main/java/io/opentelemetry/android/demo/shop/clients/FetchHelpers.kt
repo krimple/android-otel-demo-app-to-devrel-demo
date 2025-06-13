@@ -30,40 +30,38 @@ class FetchHelpers {
 
             val span = tracer?.spanBuilder("executeRequest")?.startSpan()
             return try {
-                return span?.makeCurrent().use {
-                    val result: Result<String> = suspendCoroutine { cont ->
-                        val callback = object : Callback {
-                            override fun onFailure(call: Call, e: IOException) {
-                                span?.setStatus(StatusCode.ERROR)
-                                span?.recordException(e)
-                                cont.resumeWithException(Exception("http error", e))
-                            }
-
-                            override fun onResponse(call: Call, response: Response) {
-                                val responseBody = response.body?.string() ?: ""
-
-                                if (response.code < 200 || response.code >= 300) {
-                                    span?.setStatus(StatusCode.ERROR)
-                                    val exception = Exception("error ${response.code}: $responseBody")
-
-                                    span?.recordException(exception,
-                                        Attributes.builder()
-                                            .put("name", "exception")
-                                            .put("foo", "bar")
-                                            .build())
-                                    cont.resumeWithException(exception)
-                                    return
-                                }
-
-                                cont.resume(Result.success(responseBody))
-                            }
+                val result: Result<String> = suspendCoroutine { cont ->
+                    val callback = object : Callback {
+                        override fun onFailure(call: Call, e: IOException) {
+                            span?.setStatus(StatusCode.ERROR)
+                            span?.recordException(e)
+                            cont.resumeWithException(Exception("http error", e))
                         }
 
-                        client.newCall(request).enqueue(callback)
+                        override fun onResponse(call: Call, response: Response) {
+                            val responseBody = response.body?.string() ?: ""
+
+                            if (response.code < 200 || response.code >= 300) {
+                                span?.setStatus(StatusCode.ERROR)
+                                val exception = Exception("error ${response.code}: $responseBody")
+
+                                span?.recordException(exception,
+                                    Attributes.builder()
+                                        .put("name", "exception")
+                                        .put("foo", "bar")
+                                        .build())
+                                cont.resumeWithException(exception)
+                                return
+                            }
+
+                            cont.resume(Result.success(responseBody))
+                        }
                     }
-                    
-                    result.getOrThrow()
+
+                    client.newCall(request).enqueue(callback)
                 }
+                
+                result.getOrThrow()
             } catch (e: Exception) {
                 span?.setStatus(StatusCode.ERROR)
                 span?.recordException(e)

@@ -11,17 +11,18 @@ import android.util.Log
 
 class ProductApiService(
 ) {
-    suspend fun fetchProducts(parentContext: Context = Context.current()): List<Product> {
+    suspend fun fetchProducts(currencyCode: String = "USD", parentContext: Context = Context.current()): List<Product> {
         val tracer = OtelDemoApplication.tracer("astronomy-shop")
         Log.d("otel.demo", "Tracer obtained: $tracer")
 
         val span = tracer?.spanBuilder("fetchProducts")
             ?.setParent(parentContext)
+            ?.setAttribute("currency.code", currencyCode)
             ?.startSpan()
         Log.d("otel.demo", "Span created: $span");
         return try {
             span?.makeCurrent().use {
-                val productsUrl = "${OtelDemoApplication.apiEndpoint}/products"
+                val productsUrl = "${OtelDemoApplication.apiEndpoint}/products?currencyCode=$currencyCode"
                 Log.d("otel.demo", "Making request to: $productsUrl")
                 val request = Request.Builder()
                     .url(productsUrl)
@@ -47,18 +48,19 @@ class ProductApiService(
         }
     }
 
-    suspend fun fetchProduct(productId: String, parentContext: Context = Context.current()): Product {
+    suspend fun fetchProduct(productId: String, currencyCode: String = "USD", parentContext: Context = Context.current()): Product {
         val tracer = OtelDemoApplication.tracer("astronomy-shop")
         Log.d("otel.demo", "Fetching individual product: $productId")
 
         val span = tracer?.spanBuilder("fetchProduct")
             ?.setParent(parentContext)
             ?.setAttribute("product.id", productId)
+            ?.setAttribute("currency.code", currencyCode)
             ?.startSpan()
 
         return try {
             span?.makeCurrent().use {
-                val productUrl = "${OtelDemoApplication.apiEndpoint}/products/$productId"
+                val productUrl = "${OtelDemoApplication.apiEndpoint}/products/$productId?currencyCode=$currencyCode"
                 Log.d("otel.demo", "Making request to: $productUrl")
                 val request = Request.Builder()
                     .url(productUrl)

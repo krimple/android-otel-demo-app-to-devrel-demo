@@ -70,7 +70,7 @@ fun ProductCard(
                 }
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "${product.name}\n\n$${product.priceValue()}",
+                        text = "${product.name}\n\n${product.priceUsd.formatCurrency()}",
                         fontFamily = gothamFont,
                         style = TextStyle.Default.copy(textAlign = TextAlign.Right),
                         fontSize = if (isNarrow) 13.sp else 18.sp,

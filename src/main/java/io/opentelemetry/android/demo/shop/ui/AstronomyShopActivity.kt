@@ -37,6 +37,7 @@ import io.opentelemetry.android.demo.shop.ui.cart.CartViewModel
 import io.opentelemetry.android.demo.shop.ui.cart.CheckoutConfirmationScreen
 import io.opentelemetry.android.demo.shop.ui.cart.CheckoutInfoViewModel
 import io.opentelemetry.android.demo.shop.ui.cart.InfoScreen
+import io.opentelemetry.android.demo.shop.ui.currency.CurrencyViewModel
 import io.opentelemetry.android.demo.shop.ui.products.ProductDetails
 import io.opentelemetry.android.demo.shop.ui.products.ProductList
 import io.opentelemetry.android.demo.shop.ui.products.ProductListViewModel
@@ -57,6 +58,7 @@ class AstronomyShopActivity : AppCompatActivity() {
 @Composable
 fun AstronomyShopScreen() {
     val context = LocalContext.current
+    val currencyViewModel: CurrencyViewModel = remember { CurrencyViewModel.getInstance(context) }
     val checkoutApiService = remember { CheckoutApiService() }
     val astronomyShopNavController = rememberAstronomyShopNavController()
     val cartViewModel: CartViewModel = viewModel()
@@ -95,6 +97,7 @@ fun AstronomyShopScreen() {
                     composable(BottomNavItem.List.route) {
                         ProductList(
                             productListViewModel = productListViewModel,
+                            currencyViewModel = currencyViewModel,
                             onProductClick = { productId ->
                                 astronomyShopNavController.navigateToProductDetail(productId)
                             }
@@ -112,6 +115,7 @@ fun AstronomyShopScreen() {
                                 productId = id,
                                 productDetailViewModel = productDetailViewModel,
                                 cartViewModel = cartViewModel,
+                                currencyViewModel = currencyViewModel,
                                 upPress = { astronomyShopNavController.upPress() },
                                 onProductClick = { productId ->
                                     astronomyShopNavController.navigateToProductDetail(productId)
@@ -127,12 +131,15 @@ fun AstronomyShopScreen() {
                                         astronomyShopNavController = astronomyShopNavController,
                                         cartViewModel = cartViewModel,
                                         checkoutInfoViewModel = checkoutInfoViewModel,
-                                        checkoutApiService = checkoutApiService
+                                        checkoutApiService = checkoutApiService,
+                                        currencyViewModel = currencyViewModel
                                     )
                                 }
                             },
                             upPress = {astronomyShopNavController.upPress()},
-                            checkoutInfoViewModel = checkoutInfoViewModel
+                            checkoutInfoViewModel = checkoutInfoViewModel,
+                            cartViewModel = cartViewModel,
+                            currencyViewModel = currencyViewModel
                         )
                     }
                     composable(MainDestinations.CHECKOUT_CONFIRMATION_ROUTE){
@@ -151,14 +158,16 @@ private suspend fun instrumentedPlaceOrder(
     astronomyShopNavController: InstrumentedAstronomyShopNavController,
     cartViewModel: CartViewModel,
     checkoutInfoViewModel: CheckoutInfoViewModel,
-    checkoutApiService: CheckoutApiService
+    checkoutApiService: CheckoutApiService,
+    currencyViewModel: CurrencyViewModel
 ){
     val tracer = OtelDemoApplication.tracer("astronomy-shop")
     val span = tracer?.spanBuilder("placeOrder")?.startSpan()
     try {
         span?.makeCurrent().use {
             try {
-                val checkoutResponse = checkoutApiService.placeOrder(cartViewModel, checkoutInfoViewModel)
+                val selectedCurrency = currencyViewModel.selectedCurrency.value
+                val checkoutResponse = checkoutApiService.placeOrder(cartViewModel, checkoutInfoViewModel, selectedCurrency)
                 checkoutInfoViewModel.updateCheckoutResponse(checkoutResponse)
                 generateOrderPlacedEvent(cartViewModel, checkoutInfoViewModel)
                 cartViewModel.clearCart()

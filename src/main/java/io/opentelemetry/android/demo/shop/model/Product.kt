@@ -27,4 +27,15 @@ data class PriceUsd(
     val currencyCode: String,
     val units: Long,
     val nanos: Long
-)
+) {
+    fun formatCurrency(): String {
+        val value = units + (nanos / 1_000_000_000.0)
+        return when (currencyCode) {
+            "USD" -> "$${String.format("%.2f", value)}"
+            "EUR" -> "€${String.format("%.2f", value)}"
+            "GBP" -> "£${String.format("%.2f", value)}"
+            "JPY" -> "¥${String.format("%.0f", value)}"
+            else -> "${currencyCode} ${String.format("%.2f", value)}"
+        }
+    }
+}

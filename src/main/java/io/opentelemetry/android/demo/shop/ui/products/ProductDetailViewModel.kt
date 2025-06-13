@@ -26,11 +26,12 @@ class ProductDetailViewModel(
     private val _uiState = MutableStateFlow(ProductDetailUiState())
     val uiState: StateFlow<ProductDetailUiState> = _uiState.asStateFlow()
     
-    fun loadProduct(productId: String) {
+    fun loadProduct(productId: String, currencyCode: String = "USD") {
         val tracer = OtelDemoApplication.tracer("astronomy-shop")
         val span = tracer?.spanBuilder("loadProductDetail")
             ?.setAttribute(stringKey("component"), "product_detail")
             ?.setAttribute(stringKey("product.id"), productId)
+            ?.setAttribute(stringKey("currency.code"), currencyCode)
             ?.setAttribute(stringKey("user_action"), "view_product_detail")
             ?.startSpan()
         
@@ -40,7 +41,7 @@ class ProductDetailViewModel(
             try {
                 span?.makeCurrent().use {
                     val currentContext = Context.current()
-                    val product = productApiService.fetchProduct(productId, currentContext)
+                    val product = productApiService.fetchProduct(productId, currencyCode, currentContext)
                     _uiState.value = ProductDetailUiState(
                         product = product,
                         isLoading = false,
@@ -64,7 +65,7 @@ class ProductDetailViewModel(
         }
     }
     
-    fun refreshProduct(productId: String) {
-        loadProduct(productId)
+    fun refreshProduct(productId: String, currencyCode: String = "USD") {
+        loadProduct(productId, currencyCode)
     }
 }
