@@ -29,9 +29,13 @@ import io.opentelemetry.android.demo.shop.clients.ProductCatalogClient
 import io.opentelemetry.android.demo.shop.clients.RecommendationService
 import io.opentelemetry.android.demo.shop.ui.components.SlowCometAnimation
 import io.opentelemetry.android.demo.shop.ui.components.ConfirmPopup
+import io.opentelemetry.android.demo.shop.ui.currency.CurrencyViewModel
+import io.opentelemetry.android.demo.shop.ui.currency.CurrencyToggle
+import io.opentelemetry.android.demo.shop.ui.currency.CurrencyBottomSheet
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDetails(
     productId: String,
@@ -41,14 +45,18 @@ fun ProductDetails(
     upPress: () -> Unit
 ) {
     val context = LocalContext.current
+    val currencyViewModel: CurrencyViewModel = viewModel { CurrencyViewModel(context) }
     var quantity by remember { mutableIntStateOf(1) }
     var slowRender by remember { mutableStateOf(false) }
+    var showCurrencyBottomSheet by remember { mutableStateOf(false) }
 
     val uiState by productDetailViewModel.uiState.collectAsState()
+    val selectedCurrency by currencyViewModel.selectedCurrency.collectAsState()
+    val availableCurrencies by currencyViewModel.availableCurrencies.collectAsState()
 
-    // Load product when productId changes
-    LaunchedEffect(productId) {
-        productDetailViewModel.loadProduct(productId)
+    // Load product when productId or currency changes
+    LaunchedEffect(productId, selectedCurrency) {
+        productDetailViewModel.loadProduct(productId, selectedCurrency)
     }
     Box(
         modifier = Modifier.fillMaxSize()
@@ -87,7 +95,7 @@ fun ProductDetails(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Button(
-                        onClick = { productDetailViewModel.refreshProduct(productId) }
+                        onClick = { productDetailViewModel.refreshProduct(productId, selectedCurrency) }
                     ) {
                         Text("Retry")
                     }
@@ -127,13 +135,31 @@ fun ProductDetails(
                             .height(300.dp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = product.name,
-                        fontFamily = gothamFont,
-                        fontSize = 24.sp,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
-                    )
+                    
+                    // Product name and currency toggle
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = product.name,
+                            fontFamily = gothamFont,
+                            fontSize = 24.sp,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        CurrencyToggle(
+                            currentCurrency = selectedCurrency,
+                            onCurrencySelected = { currency ->
+                                currencyViewModel.selectCurrency(currency)
+                            },
+                            onShowAllCurrencies = {
+                                showCurrencyBottomSheet = true
+                            }
+                        )
+                    }
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = product.description,
@@ -145,7 +171,7 @@ fun ProductDetails(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "$${product.priceValue()}",
+                        text = product.priceUsd.formatCurrency(),
                         fontFamily = gothamFont,
                         fontSize = 24.sp,
                         modifier = Modifier.fillMaxWidth(),
@@ -178,6 +204,22 @@ fun ProductDetails(
                     .fillMaxSize()
                     .zIndex(1f)
             )
+        }
+        
+        // Currency bottom sheet
+        if (showCurrencyBottomSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showCurrencyBottomSheet = false }
+            ) {
+                CurrencyBottomSheet(
+                    availableCurrencies = availableCurrencies,
+                    selectedCurrency = selectedCurrency,
+                    onCurrencySelected = { currency ->
+                        currencyViewModel.selectCurrency(currency)
+                    },
+                    onDismiss = { showCurrencyBottomSheet = false }
+                )
+            }
         }
     }
 }

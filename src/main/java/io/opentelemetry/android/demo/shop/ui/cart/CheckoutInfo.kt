@@ -17,7 +17,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import io.opentelemetry.android.demo.shop.ui.components.UpPressButton
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.lifecycle.viewmodel.compose.viewModel
+import io.opentelemetry.android.demo.shop.ui.currency.CurrencyViewModel
 
 @Composable
 fun InfoField(
@@ -75,13 +78,28 @@ fun InfoFieldsSection(
 fun InfoScreen(
     onPlaceOrderClick: () -> Unit,
     upPress: () -> Unit,
-    checkoutInfoViewModel: CheckoutInfoViewModel
+    checkoutInfoViewModel: CheckoutInfoViewModel,
+    cartViewModel: CartViewModel
 ) {
+    val context = LocalContext.current
+    val currencyViewModel: CurrencyViewModel = viewModel { CurrencyViewModel(context) }
+    val selectedCurrency by currencyViewModel.selectedCurrency.collectAsState()
+    
     val shippingInfo = checkoutInfoViewModel.shippingInfo
     val paymentInfo = checkoutInfoViewModel.paymentInfo
+    val shippingCost = checkoutInfoViewModel.shippingCost
+    val isCalculatingShipping = checkoutInfoViewModel.isCalculatingShipping
+    val shippingCalculationError = checkoutInfoViewModel.shippingCalculationError
 
     val focusManager = LocalFocusManager.current
     val canProceed = checkoutInfoViewModel.canProceedToCheckout()
+    
+    // Calculate shipping when shipping info is complete
+    LaunchedEffect(shippingInfo, selectedCurrency) {
+        if (shippingInfo.isComplete() && cartViewModel.cartItems.value.isNotEmpty()) {
+            checkoutInfoViewModel.calculateShippingCost(cartViewModel, selectedCurrency)
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -109,6 +127,84 @@ fun InfoScreen(
             )
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            // Shipping Cost Section
+            if (shippingInfo.isComplete()) {
+                SectionHeader(title = "Order Summary")
+                
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        // Cart total
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Subtotal:")
+                            Text(cartViewModel.getTotalPriceFormatted(selectedCurrency))
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Shipping cost
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Shipping:")
+                            when {
+                                isCalculatingShipping -> {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                }
+                                shippingCalculationError != null -> {
+                                    Text(
+                                        text = "Error calculating",
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                                shippingCost != null -> {
+                                    Text(shippingCost.formatCurrency())
+                                }
+                                else -> {
+                                    Text("Calculating...")
+                                }
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Divider()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Total
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Total:",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = formatTotalCost(cartViewModel, checkoutInfoViewModel, selectedCurrency),
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
             SectionHeader(title = "Payment Method")
 
@@ -141,4 +237,24 @@ fun InfoScreen(
                 .padding(8.dp)
         )
     }
+}
+
+// Helper functions for formatting prices
+private fun formatTotalCost(
+    cartViewModel: CartViewModel,
+    checkoutInfoViewModel: CheckoutInfoViewModel,
+    currencyCode: String
+): String {
+    val cartTotal = cartViewModel.getTotalPrice()
+    val shippingCost = checkoutInfoViewModel.shippingCost?.toDouble() ?: 0.0
+    val total = cartTotal + shippingCost
+    
+    // Create a Money object to use the formatCurrency function
+    val totalMoney = io.opentelemetry.android.demo.shop.model.Money(
+        currencyCode = currencyCode,
+        units = total.toLong(),
+        nanos = ((total - total.toLong()) * 1_000_000_000).toLong()
+    )
+    
+    return totalMoney.formatCurrency()
 }

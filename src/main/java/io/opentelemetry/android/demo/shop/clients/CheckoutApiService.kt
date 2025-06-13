@@ -24,16 +24,18 @@ class CheckoutApiService(
     suspend fun placeOrder(
         cartViewModel: CartViewModel,
         checkoutInfoViewModel: CheckoutInfoViewModel,
+        currencyCode: String = "USD",
         parentContext: Context = Context.current()
     ): CheckoutResponse {
         val span = tracer?.spanBuilder("checkout.place_order")
             ?.setParent(parentContext)
+            ?.setAttribute(stringKey("currency.code"), currencyCode)
             ?.startSpan()
 
         // TODO - if no span, then what?
         return span?.makeCurrent().use {
             try {
-                val checkoutRequest = buildCheckoutRequest(cartViewModel, checkoutInfoViewModel)
+                val checkoutRequest = buildCheckoutRequest(cartViewModel, checkoutInfoViewModel, currencyCode)
             
             // Add checkout request attributes
             span?.setAttribute(stringKey("checkout.user_id"), checkoutRequest.userId)
@@ -61,7 +63,7 @@ class CheckoutApiService(
             }
             
             val requestBody = Gson().toJson(checkoutRequest)
-            val checkoutUrl = "${OtelDemoApplication.apiEndpoint}/checkout?currencyCode=USD"
+            val checkoutUrl = "${OtelDemoApplication.apiEndpoint}/checkout?currencyCode=$currencyCode"
             val request = Request.Builder()
                 .url(checkoutUrl)
                 .post(requestBody.toRequestBody(JSON_MEDIA_TYPE))
@@ -102,7 +104,8 @@ class CheckoutApiService(
 
     private fun buildCheckoutRequest(
         cartViewModel: CartViewModel,
-        checkoutInfoViewModel: CheckoutInfoViewModel
+        checkoutInfoViewModel: CheckoutInfoViewModel,
+        currencyCode: String = "USD"
     ): CheckoutRequest {
         val shippingInfo = checkoutInfoViewModel.shippingInfo
         val paymentInfo = checkoutInfoViewModel.paymentInfo
@@ -118,7 +121,7 @@ class CheckoutApiService(
                 city = shippingInfo.city,
                 zipCode = shippingInfo.zipCode
             ),
-            userCurrency = "USD",
+            userCurrency = currencyCode,
             creditCard = CheckoutCreditCard(
                 creditCardCvv = paymentInfo.cvv.toIntOrNull() ?: 0,
                 creditCardExpirationMonth = paymentInfo.expiryMonth.toIntOrNull() ?: 1,

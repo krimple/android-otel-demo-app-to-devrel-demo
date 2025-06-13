@@ -37,6 +37,7 @@ import io.opentelemetry.android.demo.shop.ui.cart.CartViewModel
 import io.opentelemetry.android.demo.shop.ui.cart.CheckoutConfirmationScreen
 import io.opentelemetry.android.demo.shop.ui.cart.CheckoutInfoViewModel
 import io.opentelemetry.android.demo.shop.ui.cart.InfoScreen
+import io.opentelemetry.android.demo.shop.ui.currency.CurrencyViewModel
 import io.opentelemetry.android.demo.shop.ui.products.ProductDetails
 import io.opentelemetry.android.demo.shop.ui.products.ProductList
 import io.opentelemetry.android.demo.shop.ui.products.ProductListViewModel
@@ -57,6 +58,7 @@ class AstronomyShopActivity : AppCompatActivity() {
 @Composable
 fun AstronomyShopScreen() {
     val context = LocalContext.current
+    val currencyViewModel: CurrencyViewModel = viewModel { CurrencyViewModel(context) }
     val checkoutApiService = remember { CheckoutApiService() }
     val astronomyShopNavController = rememberAstronomyShopNavController()
     val cartViewModel: CartViewModel = viewModel()
@@ -127,12 +129,14 @@ fun AstronomyShopScreen() {
                                         astronomyShopNavController = astronomyShopNavController,
                                         cartViewModel = cartViewModel,
                                         checkoutInfoViewModel = checkoutInfoViewModel,
-                                        checkoutApiService = checkoutApiService
+                                        checkoutApiService = checkoutApiService,
+                                        currencyViewModel = currencyViewModel
                                     )
                                 }
                             },
                             upPress = {astronomyShopNavController.upPress()},
-                            checkoutInfoViewModel = checkoutInfoViewModel
+                            checkoutInfoViewModel = checkoutInfoViewModel,
+                            cartViewModel = cartViewModel
                         )
                     }
                     composable(MainDestinations.CHECKOUT_CONFIRMATION_ROUTE){
@@ -151,14 +155,16 @@ private suspend fun instrumentedPlaceOrder(
     astronomyShopNavController: InstrumentedAstronomyShopNavController,
     cartViewModel: CartViewModel,
     checkoutInfoViewModel: CheckoutInfoViewModel,
-    checkoutApiService: CheckoutApiService
+    checkoutApiService: CheckoutApiService,
+    currencyViewModel: CurrencyViewModel
 ){
     val tracer = OtelDemoApplication.tracer("astronomy-shop")
     val span = tracer?.spanBuilder("placeOrder")?.startSpan()
     try {
         span?.makeCurrent().use {
             try {
-                val checkoutResponse = checkoutApiService.placeOrder(cartViewModel, checkoutInfoViewModel)
+                val selectedCurrency = currencyViewModel.selectedCurrency.value
+                val checkoutResponse = checkoutApiService.placeOrder(cartViewModel, checkoutInfoViewModel, selectedCurrency)
                 checkoutInfoViewModel.updateCheckoutResponse(checkoutResponse)
                 generateOrderPlacedEvent(cartViewModel, checkoutInfoViewModel)
                 cartViewModel.clearCart()

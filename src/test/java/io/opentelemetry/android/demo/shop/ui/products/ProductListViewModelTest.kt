@@ -68,7 +68,7 @@ class ProductListViewModelTest {
             )
         )
         
-        whenever(productApiService.fetchProducts()).thenReturn(mockProducts)
+        whenever(productApiService.fetchProducts(any<String>(), any())).thenReturn(mockProducts)
         
         viewModel = ProductListViewModel(productApiService)
         viewModel.refreshProducts() // This will be first load (isRefresh=false)
@@ -108,7 +108,7 @@ class ProductListViewModelTest {
             )
         )
         
-        whenever(productApiService.fetchProducts()).thenReturn(mockProducts)
+        whenever(productApiService.fetchProducts(any<String>(), any())).thenReturn(mockProducts)
         
         viewModel = ProductListViewModel(productApiService)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -135,12 +135,12 @@ class ProductListViewModelTest {
             )
         )
         
-        whenever(productApiService.fetchProducts()).thenReturn(mockProducts)
+        whenever(productApiService.fetchProducts(any<String>(), any())).thenReturn(mockProducts)
         
         viewModel = ProductListViewModel(productApiService)
         
         // First call should be initial load (isRefresh=false)
-        viewModel.refreshProducts()
+        viewModel.refreshProducts("USD")
         testDispatcher.scheduler.advanceUntilIdle()
         
         // Verify products loaded successfully
@@ -149,7 +149,7 @@ class ProductListViewModelTest {
         assertEquals("Should have products after first call", mockProducts, firstState.products)
         
         // Second call should be refresh (isRefresh=true)
-        viewModel.refreshProducts()
+        viewModel.refreshProducts("USD")
         testDispatcher.scheduler.advanceUntilIdle()
         
         // Verify products still loaded successfully
@@ -158,6 +158,6 @@ class ProductListViewModelTest {
         assertEquals("Should still have products after refresh", mockProducts, secondState.products)
         
         // Verify API was called twice (once for initial load, once for refresh)
-        verify(productApiService, times(2)).fetchProducts(any())
+        verify(productApiService, times(2)).fetchProducts(any<String>(), any())
     }
 }

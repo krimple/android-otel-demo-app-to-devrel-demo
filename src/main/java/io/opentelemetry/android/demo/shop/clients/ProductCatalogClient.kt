@@ -11,11 +11,11 @@ import okhttp3.OkHttpClient
 class ProductCatalogClient {
    private val productApiService = ProductApiService()
 
-    suspend fun getProducts(parentContext: OtelContext = OtelContext.current()): List<Product> {
-        return productApiService.fetchProducts(parentContext)
+    suspend fun getProducts(currencyCode: String = "USD", parentContext: OtelContext = OtelContext.current()): List<Product> {
+        return productApiService.fetchProducts(currencyCode, parentContext)
     }
 
-    suspend fun getProduct(productId: String, parentContext: OtelContext = OtelContext.current()): Product {
-        return productApiService.fetchProduct(productId, parentContext)
+    suspend fun getProduct(productId: String, currencyCode: String = "USD", parentContext: OtelContext = OtelContext.current()): Product {
+        return productApiService.fetchProduct(productId, currencyCode, parentContext)
     }
 }

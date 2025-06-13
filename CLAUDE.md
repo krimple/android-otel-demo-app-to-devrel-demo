@@ -53,10 +53,16 @@ rum.access.token=your_honeycomb_api_key
 - **Product Data**: `/src/main/assets/products.json` (10 astronomy products)
 - **Navigation**: Jetpack Compose with `Navigation.kt` handling screen transitions
 - **State Management**: MVVM pattern with ViewModels:
-  - `ProductListViewModel.kt` - Product listing with lifecycle-aware loading
-  - `ProductDetailViewModel.kt` - Individual product details
+  - `ProductListViewModel.kt` - Product listing with lifecycle-aware loading and currency support
+  - `ProductDetailViewModel.kt` - Individual product details with currency support
   - `CartViewModel.kt` - Shopping cart operations  
-  - `CheckoutInfoViewModel.kt` - Checkout flow management
+  - `CheckoutInfoViewModel.kt` - Checkout flow management with shipping cost calculation
+  - `CurrencyViewModel.kt` - Currency selection and management
+- **API Services**: RESTful API clients with comprehensive telemetry:
+  - `ProductApiService.kt` - Product catalog with currency parameter support
+  - `CurrencyApiService.kt` - Available currencies fetching
+  - `ShippingApiService.kt` - Shipping cost calculation via checkout preview
+  - `CheckoutApiService.kt` - Order placement with currency and shipping support
 
 ### Demo Test Scenarios
 - **Crash**: Add exactly 10 "National Park Foundation Explorascope" items
@@ -90,6 +96,72 @@ rum.access.token=your_honeycomb_api_key
 - Navigation events: `Navigation.kt:navigateToDestination()`
 - Order placement: `AstronomyShopActivity.kt:placeOrder()`
 - Cart operations: `Cart.kt:emptyCart()`
+- Currency operations: `CurrencyApiService.kt:fetchCurrencies()`
+- Shipping calculations: `ShippingApiService.kt:getShippingCost()`
+
+### Currency and Shipping Features
+
+#### Multi-Currency Support
+- **Available Currencies**: 33+ currencies fetched from `/api/currency` endpoint
+- **Currency Storage**: Persistent selection via SharedPreferences with "USD" default
+- **Dynamic Pricing**: All product APIs support `?currencyCode=` parameter for real-time price conversion
+- **Currency UI Components**:
+  - **CurrencyToggle**: Quick switch between common currencies (USD, EUR, GBP, JPY) in product list header
+  - **CurrencyBottomSheet**: Full currency picker with search functionality for all available currencies
+  - **Real-time Updates**: Price changes propagate immediately across all product screens
+
+#### Currency Formatting and Display
+- **Localized Symbols**: Major currencies display with proper symbols (USD: $, EUR: €, GBP: £, JPY: ¥)
+- **Fallback Format**: Less common currencies display as "CODE amount" (e.g., "SEK 123.45")
+- **Consistent Formatting**: `Money.formatCurrency()` extension handles all currency display logic
+- **Price Integration**: Product cards, detail screens, and checkout all use consistent formatting
+
+#### Shipping Cost Calculation
+- **Preview Method**: Uses checkout API with preview flag to calculate shipping without placing order
+- **Real-time Calculation**: Triggered automatically when shipping info becomes complete
+- **Fallback Handling**: Graceful degradation when shipping calculation API unavailable
+- **Currency-Aware**: Shipping costs calculated and displayed in selected currency
+- **State Management**: Loading states, error handling, and cost display in CheckoutInfoViewModel
+
+#### Architecture Components
+- **CurrencyApiService.kt**: Fetches available currencies with full OpenTelemetry instrumentation
+- **CurrencyViewModel.kt**: Manages currency state, persistence, and loading with proper error handling
+- **ShippingApiService.kt**: Calculates shipping costs via checkout API preview mechanism
+- **CurrencyComponents.kt**: Reusable UI components for currency selection and display
+- **Enhanced ViewModels**: ProductListViewModel and ProductDetailViewModel updated for currency support
+
+#### Client-Side Cart Architecture
+- **Mobile Optimization**: Cart state maintained on device (vs server-side sessions in web frontend)
+- **Immediate Updates**: Cart operations trigger immediate UI updates without server round-trips
+- **Currency Consistency**: Cart totals and shipping costs always calculated in selected currency
+- **Checkout Integration**: Cart contents and currency passed to checkout API for order placement
+
+#### Comprehensive Telemetry
+All currency and shipping operations include detailed OpenTelemetry instrumentation:
+- **Currency Operations**: 
+  - `currency.code` attribute on product loading and selection spans
+  - `currencies.count` attribute when fetching available currencies
+  - Currency change events tracked as discrete user interactions
+- **Shipping Operations**:
+  - `shipping.cost.value` and `shipping.cost.currency` attributes
+  - `shipping.calculation.method` (preview vs actual) differentiation
+  - Shipping calculation timing and error rate monitoring
+- **Order Operations**:
+  - Complete order context including selected currency and calculated shipping
+  - Currency-aware order totals and tax calculations
+
+### API Endpoints
+The Android app integrates with the following REST API endpoints:
+- **GET /api/currency** - Fetch available currencies (33+ supported)
+- **GET /api/products?currencyCode={code}** - Fetch product catalog with pricing in specified currency
+- **GET /api/products/{id}?currencyCode={code}** - Fetch individual product with currency-converted pricing
+- **POST /api/checkout?currencyCode={code}** - Place order with currency-specific pricing and shipping costs
+- **GET /images/products/{picture}** - Product images served relative to API base URL
+
+**Base URL Configuration**:
+- Local Development: `http://10.0.2.2:9191` (Android emulator)
+- Production: `https://www.zurelia.honeydemo.io`
+- Configured via `OtelDemoApplication.apiEndpoint`
 
 ### Collector Configuration
 - **Receivers**: OTLP gRPC (4317) and HTTP (4318)

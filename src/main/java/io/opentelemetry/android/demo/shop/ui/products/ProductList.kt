@@ -6,42 +6,81 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.opentelemetry.android.demo.shop.model.Product
+import io.opentelemetry.android.demo.shop.ui.currency.CurrencyViewModel
+import io.opentelemetry.android.demo.shop.ui.currency.CurrencyToggle
+import io.opentelemetry.android.demo.shop.ui.currency.CurrencyBottomSheet
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductList(
     productListViewModel: ProductListViewModel = viewModel(),
     onProductClick: (String) -> Unit
 ) {
+    val context = LocalContext.current
+    val currencyViewModel: CurrencyViewModel = viewModel { CurrencyViewModel(context) }
     val uiState by productListViewModel.uiState.collectAsState()
+    val selectedCurrency by currencyViewModel.selectedCurrency.collectAsState()
+    val availableCurrencies by currencyViewModel.availableCurrencies.collectAsState()
+    
+    var showCurrencyBottomSheet by remember { mutableStateOf(false) }
 
-    // Refresh products when navigating back to this screen
-    LaunchedEffect(Unit) {
-        productListViewModel.refreshProducts()
+    // Refresh products when currency changes or when navigating back to this screen
+    LaunchedEffect(selectedCurrency) {
+        productListViewModel.refreshProducts(selectedCurrency)
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Pull-to-refresh header
-        Row(
+        // Header with currency selection
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(16.dp)
         ) {
-            Text(
-                text = "Products",
-                style = MaterialTheme.typography.headlineMedium
-            )
-
-            Button(
-                onClick = { productListViewModel.refreshProducts() },
-                enabled = !uiState.isLoading
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Refresh")
+                Text(
+                    text = "Products",
+                    style = MaterialTheme.typography.headlineMedium
+                )
+
+                Button(
+                    onClick = { productListViewModel.refreshProducts(selectedCurrency) },
+                    enabled = !uiState.isLoading
+                ) {
+                    Text("Refresh")
+                }
+            }
+            
+            // Currency selection row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Currency:",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                
+                CurrencyToggle(
+                    currentCurrency = selectedCurrency,
+                    onCurrencySelected = { currency ->
+                        currencyViewModel.selectCurrency(currency)
+                    },
+                    onShowAllCurrencies = {
+                        showCurrencyBottomSheet = true
+                    }
+                )
             }
         }
 
@@ -76,7 +115,7 @@ fun ProductList(
                         modifier = Modifier.padding(top = 8.dp)
                     )
                     Button(
-                        onClick = { productListViewModel.refreshProducts() },
+                        onClick = { productListViewModel.refreshProducts(selectedCurrency) },
                         modifier = Modifier.padding(top = 16.dp)
                     ) {
                         Text("Retry")
@@ -97,6 +136,22 @@ fun ProductList(
                         )
                     }
                 }
+            }
+        }
+        
+        // Currency bottom sheet
+        if (showCurrencyBottomSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showCurrencyBottomSheet = false }
+            ) {
+                CurrencyBottomSheet(
+                    availableCurrencies = availableCurrencies,
+                    selectedCurrency = selectedCurrency,
+                    onCurrencySelected = { currency ->
+                        currencyViewModel.selectCurrency(currency)
+                    },
+                    onDismiss = { showCurrencyBottomSheet = false }
+                )
             }
         }
     }

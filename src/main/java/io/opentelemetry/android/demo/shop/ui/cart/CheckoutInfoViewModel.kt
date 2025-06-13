@@ -4,7 +4,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import io.opentelemetry.android.demo.shop.clients.ShippingApiService
 import io.opentelemetry.android.demo.shop.model.CheckoutResponse
+import io.opentelemetry.android.demo.shop.model.Money
+import kotlinx.coroutines.launch
+import android.util.Log
 
 data class ShippingInfo(
     var email: String = "someone@example.com",
@@ -33,6 +38,7 @@ data class PaymentInfo(
 }
 
 class CheckoutInfoViewModel : ViewModel() {
+    private val shippingApiService = ShippingApiService()
 
     var shippingInfo by mutableStateOf(ShippingInfo())
         private set
@@ -41,6 +47,15 @@ class CheckoutInfoViewModel : ViewModel() {
         private set
 
     var checkoutResponse by mutableStateOf<CheckoutResponse?>(null)
+        private set
+
+    var shippingCost by mutableStateOf<Money?>(null)
+        private set
+
+    var isCalculatingShipping by mutableStateOf(false)
+        private set
+
+    var shippingCalculationError by mutableStateOf<String?>(null)
         private set
 
     fun updateShippingInfo(newShippingInfo: ShippingInfo) {
@@ -57,5 +72,38 @@ class CheckoutInfoViewModel : ViewModel() {
 
     fun canProceedToCheckout(): Boolean {
         return shippingInfo.isComplete() && paymentInfo.isComplete()
+    }
+
+    fun calculateShippingCost(cartViewModel: CartViewModel, currencyCode: String = "USD") {
+        if (!shippingInfo.isComplete() || cartViewModel.cartItems.value.isEmpty()) {
+            shippingCost = null
+            return
+        }
+
+        viewModelScope.launch {
+            isCalculatingShipping = true
+            shippingCalculationError = null
+            
+            try {
+                val cost = shippingApiService.getShippingCost(
+                    cartViewModel = cartViewModel,
+                    checkoutInfoViewModel = this@CheckoutInfoViewModel,
+                    currencyCode = currencyCode
+                )
+                shippingCost = cost
+                Log.d("otel.demo", "Shipping cost calculated: ${cost.formatCurrency()}")
+            } catch (e: Exception) {
+                shippingCalculationError = "Failed to calculate shipping: ${e.message}"
+                Log.e("otel.demo", "Failed to calculate shipping cost", e)
+            } finally {
+                isCalculatingShipping = false
+            }
+        }
+    }
+
+    fun getTotalCost(cartViewModel: CartViewModel): Double {
+        val cartTotal = cartViewModel.getTotalPrice()
+        val shipping = shippingCost?.toDouble() ?: 0.0
+        return cartTotal + shipping
     }
 }

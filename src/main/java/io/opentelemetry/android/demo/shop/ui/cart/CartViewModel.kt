@@ -2,6 +2,7 @@ package io.opentelemetry.android.demo.shop.ui.cart
 
 import androidx.lifecycle.ViewModel
 import io.opentelemetry.android.demo.shop.model.Product
+import io.opentelemetry.android.demo.shop.model.Money
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import io.opentelemetry.android.demo.OtelDemoApplication
@@ -53,6 +54,16 @@ class CartViewModel : ViewModel() {
 
     fun getTotalPrice(): Double {
         return _cartItems.value.sumOf { it.totalPrice() }
+    }
+
+    fun getTotalPriceFormatted(currencyCode: String): String {
+        val total = getTotalPrice()
+        val totalMoney = Money(
+            currencyCode = currencyCode,
+            units = total.toLong(),
+            nanos = ((total - total.toLong()) * 1_000_000_000).toLong()
+        )
+        return totalMoney.formatCurrency()
     }
 
     fun clearCart() {
