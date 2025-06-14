@@ -95,9 +95,7 @@ fun InfoScreen(
     
     // Calculate shipping when shipping info is complete
     LaunchedEffect(shippingInfo, selectedCurrency) {
-        if (shippingInfo.isComplete() && cartViewModel.cartItems.value.isNotEmpty()) {
-            checkoutInfoViewModel.calculateShippingCost(cartViewModel, selectedCurrency)
-        }
+        checkoutInfoViewModel.calculateShippingCostIfNeeded(cartViewModel, selectedCurrency)
     }
 
     Box(

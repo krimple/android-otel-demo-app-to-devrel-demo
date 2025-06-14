@@ -1,7 +1,6 @@
 package io.opentelemetry.android.demo.shop.ui.currency
 
 import android.content.Context
-import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.opentelemetry.android.demo.shop.clients.CurrencyApiService

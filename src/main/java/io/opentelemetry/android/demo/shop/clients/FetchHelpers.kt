@@ -1,11 +1,9 @@
 package io.opentelemetry.android.demo.shop.clients
 
 import io.opentelemetry.android.demo.OtelDemoApplication
-import io.opentelemetry.api.GlobalOpenTelemetry
 import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.api.trace.SpanKind
 import io.opentelemetry.api.trace.StatusCode
-import io.opentelemetry.context.Context as OtelContext
-import io.opentelemetry.context.propagation.TextMapSetter
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
@@ -16,58 +14,51 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-class OkHttpTextMapSetter : TextMapSetter<Request.Builder> {
-    override fun set(carrier: Request.Builder?, key: String, value: String) {
-        carrier?.addHeader(key, value)
-    }
-}
-
 class FetchHelpers {
     companion object {
         suspend fun executeRequest(request: Request): String {
-            val client = OkHttpClient()
-            val tracer = OtelDemoApplication.rum?.openTelemetry?.getTracer("astronomy-shop")
+            val tracer = OtelDemoApplication.rum
+                ?.openTelemetry?.getTracer("astronomy-shop") ?: return ""
 
-            val span = tracer?.spanBuilder("executeRequest")?.startSpan()
-            return try {
-                val result: Result<String> = suspendCoroutine { cont ->
-                    val callback = object : Callback {
-                        override fun onFailure(call: Call, e: IOException) {
-                            span?.setStatus(StatusCode.ERROR)
-                            span?.recordException(e)
-                            cont.resumeWithException(Exception("http error", e))
-                        }
+            val span = tracer.spanBuilder("executeRequest")
+                .setSpanKind(SpanKind.CLIENT)
+                .startSpan()
 
-                        override fun onResponse(call: Call, response: Response) {
-                            val responseBody = response.body?.string() ?: ""
+            val scope = span.makeCurrent()
 
-                            if (response.code < 200 || response.code >= 300) {
-                                span?.setStatus(StatusCode.ERROR)
-                                val exception = Exception("error ${response.code}: $responseBody")
+            return suspendCoroutine { cont ->
+                val client = OkHttpClient()
+                val tracedRequest = request.newBuilder().build()
 
-                                span?.recordException(exception,
-                                    Attributes.builder()
-                                        .put("name", "exception")
-                                        .put("foo", "bar")
-                                        .build())
-                                cont.resumeWithException(exception)
-                                return
-                            }
+                span.setAttribute("http.method", tracedRequest.method)
+                span.setAttribute("http.url", tracedRequest.url.toString())
 
-                            cont.resume(Result.success(responseBody))
-                        }
+                client.newCall(tracedRequest).enqueue(object : Callback {
+                    override fun onFailure(call: Call, e: IOException) {
+                        span.setStatus(StatusCode.ERROR)
+                        span.recordException(e)
+                        cont.resumeWithException(e)
+                        scope.close()
+                        span.end()
                     }
 
-                    client.newCall(request).enqueue(callback)
-                }
-                
-                result.getOrThrow()
-            } catch (e: Exception) {
-                span?.setStatus(StatusCode.ERROR)
-                span?.recordException(e)
-                throw e
-            } finally {
-                span?.end()
+                    override fun onResponse(call: Call, response: Response) {
+                        val body = response.body?.string() ?: ""
+                        span.setAttribute("http.status_code", response.code.toString())
+
+                        if (!response.isSuccessful) {
+                            val ex = IOException("error ${response.code}: $body")
+                            span.setStatus(StatusCode.ERROR)
+                            span.recordException(ex)
+                            cont.resumeWithException(ex)
+                        } else {
+                            cont.resume(body)
+                        }
+
+                        scope.close()
+                        span.end()
+                    }
+                })
             }
         }
     }
