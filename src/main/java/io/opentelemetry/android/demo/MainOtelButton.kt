@@ -47,7 +47,7 @@ fun generateClickEvent(counter: LongCounter?) {
     val scope = "otel.demo.app"
     OtelDemoApplication.eventBuilder(scope, "logo.clicked")?.emit()
     // For now, we also emit a span, so that we can see something in a UI
-    val tracer = OtelDemoApplication.tracer(scope)
+    val tracer = OtelDemoApplication.getTracer()
     // And we also increment a counter, to test metrics
     counter?.add(1)
     val span =

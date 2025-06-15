@@ -20,7 +20,9 @@ const val TAG = "otel.demo"
 
 class OtelDemoApplication : Application() {
     override fun onCreate() {
+
         super.onCreate()
+        INSTANCE = this
 
         Log.i(TAG, "Initializing Honeycomb OpenTelemetry Android SDK")
         
@@ -54,6 +56,8 @@ class OtelDemoApplication : Application() {
         try {
             rum = Honeycomb.configure(this, options)
             Log.d(TAG, "RUM session started with service: $serviceName")
+            // Initialize the singleton tracer here
+            appTracer = rum?.openTelemetry?.getTracer("otel.demo.app", "1.0.0")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize Honeycomb!", e)
         }
@@ -61,13 +65,18 @@ class OtelDemoApplication : Application() {
 
 
     companion object {
+
         var rum: OpenTelemetryRum? = null
+        private lateinit var INSTANCE: OtelDemoApplication
+        // Define a nullable Tracer variable for the singleton
+        private var appTracer: Tracer? = null
+        
+        fun getInstance(): OtelDemoApplication = INSTANCE
+
         var apiEndpoint: String = "https://www.zurelia.honeydemo.io/api"
 
-        fun tracer(name: String): Tracer? {
-            val tracer = rum?.openTelemetry?.getTracer(name, "1.0.0")
-            Log.d(TAG, "Getting tracer for scope: $name, tracer: $tracer")
-            return tracer
+        fun getTracer(): Tracer? {
+            return appTracer
         }
 
         fun counter(name: String): LongCounter? {

@@ -68,7 +68,7 @@ class ProductListViewModelTest {
             )
         )
         
-        whenever(productApiService.fetchProducts(any<String>(), any())).thenReturn(mockProducts)
+        whenever(productApiService.fetchProducts()).thenReturn(mockProducts)
         
         viewModel = ProductListViewModel(productApiService)
         viewModel.refreshProducts() // This will be first load (isRefresh=false)
@@ -108,7 +108,7 @@ class ProductListViewModelTest {
             )
         )
         
-        whenever(productApiService.fetchProducts(any<String>(), any())).thenReturn(mockProducts)
+        whenever(productApiService.fetchProducts()).thenReturn(mockProducts)
         
         viewModel = ProductListViewModel(productApiService)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -135,7 +135,7 @@ class ProductListViewModelTest {
             )
         )
         
-        whenever(productApiService.fetchProducts(any<String>(), any())).thenReturn(mockProducts)
+        whenever(productApiService.fetchProducts(any<String>())).thenReturn(mockProducts)
         
         viewModel = ProductListViewModel(productApiService)
         
@@ -158,6 +158,6 @@ class ProductListViewModelTest {
         assertEquals("Should still have products after refresh", mockProducts, secondState.products)
         
         // Verify API was called twice (once for initial load, once for refresh)
-        verify(productApiService, times(2)).fetchProducts(any<String>(), any())
+        verify(productApiService, times(2)).fetchProducts()
     }
 }

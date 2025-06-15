@@ -1,5 +1,6 @@
 package io.opentelemetry.android.demo.shop.clients
 
+import android.content.Context.MODE_PRIVATE
 import com.google.gson.Gson
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.model.*
@@ -13,27 +14,35 @@ import java.util.UUID
 import io.opentelemetry.api.common.AttributeKey.doubleKey
 import io.opentelemetry.api.common.AttributeKey.longKey
 import io.opentelemetry.api.common.AttributeKey.stringKey
+import io.opentelemetry.api.trace.StatusCode
+import android.util.Log
+import io.opentelemetry.extension.kotlin.asContextElement
 
 class CheckoutApiService(
 ) {
     companion object {
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
-        private val tracer = OtelDemoApplication.tracer("astronomy-shop")
+        private val tracer = OtelDemoApplication.getTracer()
     }
 
     suspend fun placeOrder(
         cartViewModel: CartViewModel,
         checkoutInfoViewModel: CheckoutInfoViewModel,
-        currencyCode: String = "USD",
-        parentContext: Context = Context.current()
     ): CheckoutResponse {
+        val currencyCode = OtelDemoApplication.getInstance().getSharedPreferences("currency_prefs", MODE_PRIVATE)
+            ?.getString("selected_currency", "USD") ?: "USD"
+
         val span = tracer?.spanBuilder("checkout.place_order")
-            ?.setParent(parentContext)
-            ?.setAttribute(stringKey("currency.code"), currencyCode)
             ?.startSpan()
 
+        Log.d("CheckoutApiService", "SPAN CREATED: checkout.place_order span=$span, tracer=$tracer")
+
+        span?.setAttribute(stringKey("currency.code"), currencyCode)
+
         // TODO - if no span, then what?
+        Log.d("CheckoutApiService", "SPAN MAKING CURRENT: checkout.place_order span=$span")
         return span?.makeCurrent().use {
+            Log.d("CheckoutApiService", "SPAN IS NOW CURRENT: checkout.place_order span=$span")
             try {
                 val checkoutRequest = buildCheckoutRequest(cartViewModel, checkoutInfoViewModel, currencyCode)
             
@@ -69,7 +78,9 @@ class CheckoutApiService(
                 .post(requestBody.toRequestBody(JSON_MEDIA_TYPE))
                 .build()
 
+            Log.d("CheckoutApiService", "BEFORE HTTP REQUEST: checkout.place_order span=$span, about to call FetchHelpers.executeRequest")
             val responseBody = FetchHelpers.executeRequest(request)
+            Log.d("CheckoutApiService", "AFTER HTTP REQUEST: checkout.place_order span=$span, FetchHelpers.executeRequest completed")
             val checkoutResponse = Gson().fromJson(responseBody, CheckoutResponse::class.java)
             
             // Add response attributes
@@ -88,16 +99,23 @@ class CheckoutApiService(
                 totalCost += item.cost.toDouble()
             }
             
-                span?.setAttribute(doubleKey("checkout.response.total_item_cost"), totalCost)
-                span?.setAttribute(doubleKey("checkout.response.total_order_cost"), totalCost + checkoutResponse.shippingCost.toDouble())
-                
-                checkoutResponse
+            span?.setAttribute(doubleKey("checkout.response.total_item_cost"), totalCost)
+            span?.setAttribute(
+                doubleKey("checkout.response.total_order_cost"),
+                totalCost + checkoutResponse.shippingCost.toDouble())
+
+            // return this response
+            checkoutResponse
             } catch (e: Exception) {
+                Log.d("CheckoutApiService", "SPAN ERROR: checkout.place_order span=$span, exception=${e.message}")
                 span?.recordException(e)
+                span?.setStatus(StatusCode.ERROR)
                 span?.setAttribute(stringKey("error.message"), e.message ?: "Unknown error")
                 throw e
             } finally {
+                Log.d("CheckoutApiService", "SPAN ENDING: checkout.place_order span=$span")
                 span?.end()
+                Log.d("CheckoutApiService", "SPAN ENDED: checkout.place_order span=$span")
             }
         }
     }

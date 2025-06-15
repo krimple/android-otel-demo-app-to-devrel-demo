@@ -12,51 +12,59 @@ import okhttp3.Response
 import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
+import android.util.Log
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 class FetchHelpers {
     companion object {
-        suspend fun executeRequest(request: Request): String {
-            val tracer = OtelDemoApplication.rum
-                ?.openTelemetry?.getTracer("astronomy-shop") ?: return ""
+        private val tracer = OtelDemoApplication.getTracer()
 
-            val span = tracer.spanBuilder("executeRequest")
-                .setSpanKind(SpanKind.CLIENT)
-                .startSpan()
+        private val client = OkHttpClient()
 
-            val scope = span.makeCurrent()
+        suspend fun executeRequest(request: Request): String = suspendCancellableCoroutine<String> { cont ->
 
-            return suspendCoroutine { cont ->
-                val client = OkHttpClient()
-                val tracedRequest = request.newBuilder().build()
+            val span = tracer?.spanBuilder("executeRequest")?.setSpanKind(SpanKind.CLIENT)?.startSpan()
+            val tracedRequest = request.newBuilder().build()
 
-                span.setAttribute("http.method", tracedRequest.method)
-                span.setAttribute("http.url", tracedRequest.url.toString())
+            val call = client.newCall(tracedRequest)
+
+            cont.invokeOnCancellation {
+                call.cancel()
+            }
+
+            span?.makeCurrent().use {
+                span?.setAttribute("http.method", tracedRequest.method)
+                span?.setAttribute("http.url", tracedRequest.url.toString())
 
                 client.newCall(tracedRequest).enqueue(object : Callback {
+
                     override fun onFailure(call: Call, e: IOException) {
-                        span.setStatus(StatusCode.ERROR)
-                        span.recordException(e)
-                        cont.resumeWithException(e)
-                        scope.close()
-                        span.end()
+                            Log.d(
+                                "FetchHelpers",
+                                "SPAN ERROR: executeRequest span=$span, HTTP error ${e.message}"
+                            )
+                            span?.setStatus(StatusCode.ERROR)
+                            span?.recordException(e)
+                            span?.end()
+                            cont.resumeWithException(e)
                     }
 
-                    override fun onResponse(call: Call, response: Response) {
-                        val body = response.body?.string() ?: ""
-                        span.setAttribute("http.status_code", response.code.toString())
-
-                        if (!response.isSuccessful) {
-                            val ex = IOException("error ${response.code}: $body")
-                            span.setStatus(StatusCode.ERROR)
-                            span.recordException(ex)
-                            cont.resumeWithException(ex)
-                        } else {
-                            cont.resume(body)
-                        }
-
-                        scope.close()
-                        span.end()
+                    override fun onResponse(call: Call, response: Response): Unit {
+                            if (!response.isSuccessful) {
+                                Log.d(
+                                    "FetchHelpers",
+                                    "SPAN ERROR: executeRequest span=$span, HTTP error ${response.message}"
+                                )
+                                span?.setStatus(StatusCode.ERROR)
+                                val ex =
+                                    IOException("error ${response.code}: ${response.body?.string()}")
+                                span?.recordException(ex)
+                                span?.end()
+                                cont.resumeWithException(ex)
+                            } else {
+                                span?.end()
+                                cont.resume(response.body?.string() ?: "")
+                            }
                     }
                 })
             }

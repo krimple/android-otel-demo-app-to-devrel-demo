@@ -15,12 +15,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -30,8 +26,6 @@ import androidx.navigation.compose.composable
 import io.honeycomb.opentelemetry.android.Honeycomb
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.clients.CheckoutApiService
-import io.opentelemetry.android.demo.shop.clients.ProductApiService
-import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.android.demo.shop.ui.cart.CartScreen
 import io.opentelemetry.android.demo.shop.ui.cart.CartViewModel
 import io.opentelemetry.android.demo.shop.ui.cart.CheckoutConfirmationScreen
@@ -45,8 +39,15 @@ import io.opentelemetry.android.demo.shop.ui.products.ProductDetailViewModel
 import io.opentelemetry.android.demo.theme.DemoAppTheme
 import io.opentelemetry.api.common.AttributeKey.doubleKey
 import io.opentelemetry.api.common.AttributeKey.stringKey
+import android.util.Log
+import io.opentelemetry.context.Context
+import io.opentelemetry.extension.kotlin.asContextElement
 
 class AstronomyShopActivity : AppCompatActivity() {
+    companion object {
+        val tracer = OtelDemoApplication.getTracer()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -104,9 +105,15 @@ fun AstronomyShopScreen() {
                         )
                     }
                     composable(BottomNavItem.Cart.route) {
-                        CartScreen(cartViewModel = cartViewModel, onCheckoutClick = {astronomyShopNavController.navigateToCheckoutInfo()},  onProductClick = { productId ->
-                            astronomyShopNavController.navigateToProductDetail(productId)
-                        })
+                        CartScreen(
+                            cartViewModel = cartViewModel,
+                            onCheckoutClick = {
+                                astronomyShopNavController.navigateToCheckoutInfo()
+                            },
+                            onProductClick = { productId ->
+                                astronomyShopNavController.navigateToProductDetail(productId)
+                            }
+                        )
                     }
                     composable("${MainDestinations.PRODUCT_DETAIL_ROUTE}/{${MainDestinations.PRODUCT_ID_KEY}}") { backStackEntry ->
                         val productId = backStackEntry.arguments?.getString(MainDestinations.PRODUCT_ID_KEY)
@@ -126,13 +133,12 @@ fun AstronomyShopScreen() {
                     composable(MainDestinations.CHECKOUT_INFO_ROUTE) {
                         InfoScreen(
                             onPlaceOrderClick = {
-                                coroutineScope.launch {
-                                    instrumentedPlaceOrder(
+                                coroutineScope.launch (Context.current().asContextElement()){
+                                    placeOrder(
                                         astronomyShopNavController = astronomyShopNavController,
                                         cartViewModel = cartViewModel,
                                         checkoutInfoViewModel = checkoutInfoViewModel,
                                         checkoutApiService = checkoutApiService,
-                                        currencyViewModel = currencyViewModel
                                     )
                                 }
                             },
@@ -154,35 +160,42 @@ fun AstronomyShopScreen() {
     }
 }
 
-private suspend fun instrumentedPlaceOrder(
+private suspend fun placeOrder(
     astronomyShopNavController: InstrumentedAstronomyShopNavController,
     cartViewModel: CartViewModel,
     checkoutInfoViewModel: CheckoutInfoViewModel,
     checkoutApiService: CheckoutApiService,
-    currencyViewModel: CurrencyViewModel
 ){
-    val tracer = OtelDemoApplication.tracer("astronomy-shop")
+    val tracer = OtelDemoApplication.getTracer()
     val span = tracer?.spanBuilder("placeOrder")?.startSpan()
+    Log.d("AstronomyShopActivity", "SPAN CREATED: placeOrder span=$span, tracer=$tracer")
     try {
+        Log.d("AstronomyShopActivity", "SPAN MAKING CURRENT: placeOrder span=$span")
         span?.makeCurrent().use {
+            Log.d("AstronomyShopActivity", "SPAN IS NOW CURRENT: placeOrder span=$span")
             try {
-                val selectedCurrency = currencyViewModel.selectedCurrency.value
-                val checkoutResponse = checkoutApiService.placeOrder(cartViewModel, checkoutInfoViewModel, selectedCurrency)
+                Log.d("AstronomyShopActivity", "BEFORE CHECKOUT API CALL: placeOrder span=$span, about to call checkoutApiService.placeOrder")
+                val checkoutResponse = checkoutApiService.placeOrder(cartViewModel, checkoutInfoViewModel)
+                Log.d("AstronomyShopActivity", "AFTER CHECKOUT API CALL: placeOrder span=$span, checkoutApiService.placeOrder completed")
                 checkoutInfoViewModel.updateCheckoutResponse(checkoutResponse)
                 generateOrderPlacedEvent(cartViewModel, checkoutInfoViewModel)
                 cartViewModel.clearCart()
                 astronomyShopNavController.navigateToCheckoutConfirmation()
             } catch (e: Exception) {
+                Log.d("AstronomyShopActivity", "SPAN ERROR: placeOrder span=$span, exception=${e.message}")
                 span?.recordException(e)
                 OtelDemoApplication.rum?.let { Honeycomb.logException(it, e) }
                 e.printStackTrace()
+                // TODO show error view when failed in UI
                 generateOrderPlacedEvent(cartViewModel, checkoutInfoViewModel)
                 cartViewModel.clearCart()
                 astronomyShopNavController.navigateToCheckoutConfirmation()
             }
         }
     } finally {
+        Log.d("AstronomyShopActivity", "SPAN ENDING: placeOrder span=$span")
         span?.end()
+        Log.d("AstronomyShopActivity", "SPAN ENDED: placeOrder span=$span")
     }
 }
 
@@ -190,14 +203,17 @@ private fun generateOrderPlacedEvent(
     cartViewModel: CartViewModel,
     checkoutInfoViewModel: CheckoutInfoViewModel
 ) {
-    val tracer = OtelDemoApplication.tracer("otel.demo.app")
+    val tracer = OtelDemoApplication.getTracer()
     val span = tracer?.spanBuilder("orderPlaced")
         ?.setAttribute(doubleKey("order.total.value"), cartViewModel.getTotalPrice())
         ?.setAttribute(stringKey("buyer.state"), checkoutInfoViewModel.shippingInfo.state)
         ?.startSpan()
-    
+
+    Log.d("AstronomyShopActivity", "SPAN CREATED: orderPlaced span=$span, tracer=$tracer")
     try {
+        Log.d("AstronomyShopActivity", "SPAN MAKING CURRENT: orderPlaced span=$span")
         span?.makeCurrent().use {
+            Log.d("AstronomyShopActivity", "SPAN IS NOW CURRENT: orderPlaced span=$span")
             val eventBuilder = OtelDemoApplication.eventBuilder("otel.demo.app", "order.placed")
             eventBuilder
                 ?.setAttribute(doubleKey("order.total.value"), cartViewModel.getTotalPrice())
@@ -205,7 +221,9 @@ private fun generateOrderPlacedEvent(
                 ?.emit()
         }
     } finally {
+        Log.d("AstronomyShopActivity", "SPAN ENDING: orderPlaced span=$span")
         span?.end()
+        Log.d("AstronomyShopActivity", "SPAN ENDED: orderPlaced span=$span")
     }
 }
 

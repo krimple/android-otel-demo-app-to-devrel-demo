@@ -90,7 +90,7 @@ class CheckoutInfoViewModel : ViewModel() {
     }
 
     private fun calculateShippingCost(cartViewModel: CartViewModel, currencyCode: String = "USD") {
-        val tracer = OtelDemoApplication.tracer("astronomy-shop")
+        val tracer = OtelDemoApplication.getTracer()
 
         viewModelScope.launch {
             if (!shippingInfo.isComplete() || cartViewModel.cartItems.value.isEmpty()) {

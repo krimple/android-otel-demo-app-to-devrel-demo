@@ -11,14 +11,14 @@ import android.util.Log
 
 class ProductApiService(
 ) {
-    suspend fun fetchProducts(currencyCode: String = "USD", parentContext: Context = Context.current()): List<Product> {
-        val tracer = OtelDemoApplication.tracer("astronomy-shop")
+    suspend fun fetchProducts(currencyCode: String = "USD"): List<Product> {
+        val tracer = OtelDemoApplication.getTracer()
         Log.d("otel.demo", "Tracer obtained: $tracer")
 
         val span = tracer?.spanBuilder("fetchProducts")
-            ?.setParent(parentContext)
-            ?.setAttribute("currency.code", currencyCode)
             ?.startSpan()
+
+        span?.setAttribute("currency.code", currencyCode)
         Log.d("otel.demo", "Span created: $span");
         return try {
             span?.makeCurrent().use {
@@ -39,8 +39,6 @@ class ProductApiService(
             // do I need both??
             span?.setStatus(StatusCode.ERROR)
             span?.recordException(e)
-            // TODO - do we need this call?
-            // Honeycomb.logException(, e)
             throw e
         } finally {
             Log.d("otel.demo", "Ending span: $span")
@@ -48,15 +46,14 @@ class ProductApiService(
         }
     }
 
-    suspend fun fetchProduct(productId: String, currencyCode: String = "USD", parentContext: Context = Context.current()): Product {
-        val tracer = OtelDemoApplication.tracer("astronomy-shop")
+    suspend fun fetchProduct(productId: String, currencyCode: String = "USD"): Product {
+        val tracer = OtelDemoApplication.getTracer()
         Log.d("otel.demo", "Fetching individual product: $productId")
 
         val span = tracer?.spanBuilder("fetchProduct")
-            ?.setParent(parentContext)
-            ?.setAttribute("product.id", productId)
-            ?.setAttribute("currency.code", currencyCode)
             ?.startSpan()
+        span?.setAttribute("product.id", productId)
+        span?.setAttribute("currency.code", currencyCode)
 
         return try {
             span?.makeCurrent().use {

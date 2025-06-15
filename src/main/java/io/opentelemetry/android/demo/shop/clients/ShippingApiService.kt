@@ -23,7 +23,7 @@ class ShippingApiService {
         currencyCode: String = "USD",
         parentContext: Context = Context.current()
     ): Money {
-        val tracer = OtelDemoApplication.tracer("astronomy-shop")
+        val tracer = OtelDemoApplication.getTracer()
         Log.d("otel.demo", "Getting shipping cost preview for ${cartViewModel.cartItems.value.size} items")
 
         val span = tracer?.spanBuilder("getShippingCost")

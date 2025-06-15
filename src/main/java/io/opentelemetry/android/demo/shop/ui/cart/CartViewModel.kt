@@ -22,7 +22,7 @@ class CartViewModel : ViewModel() {
     val cartItems: StateFlow<List<CartItem>> = _cartItems
 
     fun addProduct(product: Product, quantity: Int) {
-        val tracer = OtelDemoApplication.tracer("cart.operations")
+        val tracer = OtelDemoApplication.getTracer()
         val span = tracer?.spanBuilder("cart.add_product")
             ?.setAttribute(stringKey("product.id"), product.id)
             ?.setAttribute(stringKey("product.name"), product.name)
@@ -67,7 +67,7 @@ class CartViewModel : ViewModel() {
     }
 
     fun clearCart() {
-        val tracer = OtelDemoApplication.tracer("cart.operations")
+        val tracer = OtelDemoApplication.getTracer()
         val span = tracer?.spanBuilder("cart.clear")
             ?.setAttribute(doubleKey("cart.total_price_before_clear"), getTotalPrice())
             ?.setAttribute(longKey("cart.items_count_before_clear"), _cartItems.value.size.toLong())

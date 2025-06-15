@@ -9,6 +9,7 @@ import io.opentelemetry.api.common.AttributeKey.longKey
 import io.opentelemetry.api.common.AttributeKey.stringKey
 import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.context.Context
+import io.opentelemetry.extension.kotlin.asContextElement
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,21 +40,22 @@ class ProductListViewModel(
     }
     
     private fun loadProducts(currencyCode: String = "USD", isRefresh: Boolean = false) {
-        val tracer = OtelDemoApplication.tracer("astronomy-shop")
-        val span = tracer?.spanBuilder("loadProducts")
-            ?.setAttribute(stringKey("component"), "product_list")
-            ?.setAttribute("is_refresh", isRefresh)
-            ?.setAttribute(stringKey("currency.code"), currencyCode)
-            ?.setAttribute(stringKey("user_action"), "view_product_list")
-            ?.startSpan()
+
         
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
 
+            val tracer = OtelDemoApplication.getTracer()
+            val span = tracer?.spanBuilder("loadProducts")?.startSpan()
+
+            span?.setAttribute(stringKey("component"), "product_list")
+                ?.setAttribute("is_refresh", isRefresh)
+                ?.setAttribute(stringKey("currency.code"), currencyCode)
+                ?.setAttribute(stringKey("user_action"), "view_product_list")
+
             try {
                 span?.makeCurrent().use {
-                    val currentContext = Context.current()
-                    val products = productApiService.fetchProducts(currencyCode, currentContext)
+                    val products = productApiService.fetchProducts(currencyCode)
                     _uiState.value = ProductListUiState(
                         products = products,
                         isLoading = false,

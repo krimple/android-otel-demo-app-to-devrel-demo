@@ -7,37 +7,44 @@ import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.context.Context
 import okhttp3.Request
 import android.util.Log
+import io.opentelemetry.extension.kotlin.asContextElement
 
 class CurrencyApiService {
-    suspend fun fetchCurrencies(parentContext: Context = Context.current()): List<String> {
-        val tracer = OtelDemoApplication.tracer("astronomy-shop")
+    companion object {
+        private val tracer = OtelDemoApplication.getTracer()
+    }
+
+    suspend fun fetchCurrencies(): List<String> {
         Log.d("otel.demo", "Fetching available currencies")
 
-        val span = tracer?.spanBuilder("fetchCurrencies")
-            ?.setParent(parentContext)
-            ?.startSpan()
+        val span = tracer?.spanBuilder("fetchCurrencies")?.startSpan()
+        val currencies = span?.makeCurrent().use {
+            try {
+                val currencyUrl = "${OtelDemoApplication.apiEndpoint}/currency"
+                Log.d("otel.demo", "Making request to: $currencyUrl")
+                val request = Request.Builder()
+                    .url(currencyUrl)
+                    .get().build()
 
-        return try {
-            val currencyUrl = "${OtelDemoApplication.apiEndpoint}/currency"
-            Log.d("otel.demo", "Making request to: $currencyUrl")
-            val request = Request.Builder()
-                .url(currencyUrl)
-                .get().build()
+                // make the actual call
+                val bodyText = FetchHelpers.executeRequest(request)
 
-            val bodyText = FetchHelpers.executeRequest(request)
-            val listType = object : TypeToken<List<String>>() {}.type
-            Log.d("otel.demo", "Currency request completed successfully")
-            
-            span?.setAttribute("currencies.count", Gson().fromJson<List<String>>(bodyText, listType).size.toLong())
-            Gson().fromJson<List<String>>(bodyText, listType)
-        } catch (e: Exception) {
-            Log.d("otel.demo", "Currency request failed with exception: ${e.message}")
-            span?.setStatus(StatusCode.ERROR)
-            span?.recordException(e)
-            throw e
-        } finally {
-            Log.d("otel.demo", "Ending currency span: $span")
-            span?.end()
+                val listType = object : TypeToken<List<String>>() {}.type
+                val currencies = Gson().fromJson<List<String>>(bodyText, listType)
+
+                Log.d("otel.demo", "Currency request completed successfully")
+                span?.setAttribute( "currencies.count", currencies.joinToString(","))
+                currencies
+            } catch (e: Exception) {
+                Log.d("otel.demo", "Currency request failed with exception: ${e.message}")
+                span?.setStatus(StatusCode.ERROR)
+                span?.recordException(e)
+                throw e
+            } finally {
+                Log.d("otel.demo", "Ending currency span: $span")
+                span?.end()
+            }
         }
+        return currencies
     }
 }

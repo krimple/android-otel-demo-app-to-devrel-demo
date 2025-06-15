@@ -2,20 +2,23 @@ package io.opentelemetry.android.demo.shop.ui.currency
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import io.opentelemetry.android.demo.shop.clients.CurrencyApiService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import android.util.Log
+import androidx.lifecycle.viewModelScope
+import io.opentelemetry.android.demo.OtelDemoApplication
+import io.opentelemetry.api.trace.StatusCode
+import io.opentelemetry.extension.kotlin.asContextElement
 
-class CurrencyViewModel(private val context: Context? = null) : ViewModel() {
+class CurrencyViewModel() : ViewModel() {
     private val currencyApiService = CurrencyApiService()
-    
+
     private val _availableCurrencies = MutableStateFlow<List<String>>(emptyList())
     val availableCurrencies: StateFlow<List<String>> = _availableCurrencies.asStateFlow()
-    
+
     private val _selectedCurrency = MutableStateFlow(getSavedCurrency())
     val selectedCurrency: StateFlow<String> = _selectedCurrency.asStateFlow()
     
@@ -28,10 +31,10 @@ class CurrencyViewModel(private val context: Context? = null) : ViewModel() {
     companion object {
         @Volatile
         private var INSTANCE: CurrencyViewModel? = null
-        
+
         fun getInstance(context: Context): CurrencyViewModel {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: CurrencyViewModel(context).also { 
+                INSTANCE ?: CurrencyViewModel().also {
                     INSTANCE = it
                     it.loadCurrencies()
                 }
@@ -44,15 +47,25 @@ class CurrencyViewModel(private val context: Context? = null) : ViewModel() {
     }
 
     private fun getSavedCurrency(): String {
-        return context?.getSharedPreferences("currency_prefs", Context.MODE_PRIVATE)
-            ?.getString("selected_currency", "USD") ?: "USD"
+        return try {
+            val prefs = OtelDemoApplication.getInstance()
+            prefs.getSharedPreferences("currency_prefs", Context.MODE_PRIVATE)
+                ?.getString("selected_currency", "USD") ?: "USD"
+        } catch (e: Exception) {
+            // Fallback for tests or when OtelDemoApplication is not initialized
+            "USD"
+        }
     }
 
     private fun saveCurrency(currency: String) {
-        context?.getSharedPreferences("currency_prefs", Context.MODE_PRIVATE)
-            ?.edit()
-            ?.putString("selected_currency", currency)
-            ?.apply()
+        try {
+            val prefs = OtelDemoApplication.getInstance()
+            val currencyPrefs = prefs.getSharedPreferences("currency_prefs", Context.MODE_PRIVATE)
+            currencyPrefs.edit().putString("selected_currency", currency).apply()
+        } catch (e: Exception) {
+            // Ignore save errors in tests
+            Log.w("CurrencyViewModel", "Could not save currency preference: ${e.message}")
+        }
     }
 
     private fun loadCurrencies() {
@@ -60,20 +73,13 @@ class CurrencyViewModel(private val context: Context? = null) : ViewModel() {
             Log.d("otel.demo", "Currencies already loaded or loading, skipping duplicate call")
             return
         }
-        
+
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
-            try {
-                val currencies = currencyApiService.fetchCurrencies()
-                _availableCurrencies.value = currencies
-                Log.d("otel.demo", "Loaded ${currencies.size} currencies")
-            } catch (e: Exception) {
-                _error.value = "Failed to load currencies: ${e.message}"
-                Log.e("otel.demo", "Failed to load currencies", e)
-            } finally {
-                _isLoading.value = false
-            }
+
+            val currencies = currencyApiService.fetchCurrencies()
+            _availableCurrencies.value = currencies
         }
     }
 
