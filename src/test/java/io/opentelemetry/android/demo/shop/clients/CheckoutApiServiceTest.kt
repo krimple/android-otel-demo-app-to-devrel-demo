@@ -76,11 +76,6 @@ class CheckoutApiServiceTest {
         val methods = checkoutApiService::class.java.methods.filter { it.name == "placeOrder" }
         assertFalse("placeOrder methods should exist", methods.isEmpty())
 
-        // Debug: Print all method signatures
-        methods.forEach { method ->
-            println("Method: ${method.name}, Parameters: ${method.parameterTypes.map { it.simpleName }}")
-        }
-
         // The placeOrder method is a suspend function, so it will have an additional Continuation parameter
         // Look for a method that has CartViewModel and CheckoutInfoViewModel in its parameters
         val correctMethod = methods.find { method ->
