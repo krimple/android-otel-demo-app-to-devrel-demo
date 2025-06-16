@@ -15,11 +15,8 @@ class CurrencyViewModelTest {
 
     @Before
     fun setUp() {
-        // Reset the singleton instance before each test
-        CurrencyViewModel::class.java.getDeclaredField("INSTANCE").apply {
-            isAccessible = true
-            set(null, null)
-        }
+        // No setup needed since we removed the singleton pattern
+        // Each test creates its own ViewModel instance
     }
 
     @Test

@@ -19,7 +19,7 @@ class ProductApiService(
             ?.startSpan()
 
         span?.setAttribute("currency.code", currencyCode)
-        Log.d("otel.demo", "Span created: $span");
+        Log.d("otel.demo", "Span created: $span")
         return try {
             span?.makeCurrent().use {
                 val productsUrl = "${OtelDemoApplication.apiEndpoint}/products?currencyCode=$currencyCode"

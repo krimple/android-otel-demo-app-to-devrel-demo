@@ -7,44 +7,46 @@ import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.context.Context
 import okhttp3.Request
 import android.util.Log
+import io.opentelemetry.api.trace.Span
 import io.opentelemetry.extension.kotlin.asContextElement
 
 class CurrencyApiService {
-    companion object {
-        private val tracer = OtelDemoApplication.getTracer()
-    }
-
     suspend fun fetchCurrencies(): List<String> {
         Log.d("otel.demo", "Fetching available currencies")
 
-        val span = tracer?.spanBuilder("fetchCurrencies")?.startSpan()
-        val currencies = span?.makeCurrent().use {
-            try {
-                val currencyUrl = "${OtelDemoApplication.apiEndpoint}/currency"
-                Log.d("otel.demo", "Making request to: $currencyUrl")
-                val request = Request.Builder()
-                    .url(currencyUrl)
-                    .get().build()
+        val currencyUrl = "${OtelDemoApplication.apiEndpoint}/currency"
+        val request = Request.Builder()
+            .url(currencyUrl)
+            .get().build()
 
-                // make the actual call
-                val bodyText = FetchHelpers.executeRequest(request)
+        try {
 
-                val listType = object : TypeToken<List<String>>() {}.type
-                val currencies = Gson().fromJson<List<String>>(bodyText, listType)
+            // make the actual call
+            val bodyText = FetchHelpers.executeRequest(request)
 
-                Log.d("otel.demo", "Currency request completed successfully")
-                span?.setAttribute( "currencies.count", currencies.joinToString(","))
-                currencies
-            } catch (e: Exception) {
-                Log.d("otel.demo", "Currency request failed with exception: ${e.message}")
-                span?.setStatus(StatusCode.ERROR)
-                span?.recordException(e)
-                throw e
-            } finally {
-                Log.d("otel.demo", "Ending currency span: $span")
-                span?.end()
+            val listType = object : TypeToken<List<String>>() {}.type
+            val currencies = Gson().fromJson<List<String>>(bodyText, listType)
+
+            // post-call enrichment of OK HTTP span
+            val currentSpan = Span.current()
+            if (currentSpan.isRecording) {
+                currentSpan.setAttribute("operation.type", "fetch_currencies")
+                currentSpan.setAttribute("component", "currency_service")
+                currentSpan.setAttribute("currencies.count", currencies.size.toLong())
+                currentSpan.setAttribute("currencies.list", currencies.joinToString(","))
+                currentSpan.updateName("fetchCurrencies") // Change from "executeRequest" to business name
             }
+            return currencies
+        } catch (e: Exception) {
+            val currentSpan = Span.current()
+            if (currentSpan.isRecording) {
+                currentSpan.setAttribute("operation.type", "fetch_currencies")
+                currentSpan.setAttribute("component", "currency_service")
+                currentSpan.setAttribute("business.error", "failed_to_fetch_currencies")
+                currentSpan.updateName("fetchCurrencies")
+                // Note: FetchHelpers already set ERROR status and recorded the HTTP exception
+            }
+            throw e
         }
-        return currencies
     }
 }

@@ -6,7 +6,6 @@ import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.model.*
 import io.opentelemetry.android.demo.shop.ui.cart.CartViewModel
 import io.opentelemetry.android.demo.shop.ui.cart.CheckoutInfoViewModel
-import io.opentelemetry.context.Context
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -16,13 +15,11 @@ import io.opentelemetry.api.common.AttributeKey.longKey
 import io.opentelemetry.api.common.AttributeKey.stringKey
 import io.opentelemetry.api.trace.StatusCode
 import android.util.Log
-import io.opentelemetry.extension.kotlin.asContextElement
 
 class CheckoutApiService(
 ) {
     companion object {
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
-        private val tracer = OtelDemoApplication.getTracer()
     }
 
     suspend fun placeOrder(
@@ -31,7 +28,7 @@ class CheckoutApiService(
     ): CheckoutResponse {
         val currencyCode = OtelDemoApplication.getInstance().getSharedPreferences("currency_prefs", MODE_PRIVATE)
             ?.getString("selected_currency", "USD") ?: "USD"
-
+        val tracer = OtelDemoApplication.getTracer()
         val span = tracer?.spanBuilder("checkout.place_order")
             ?.startSpan()
 

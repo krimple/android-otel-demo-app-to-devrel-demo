@@ -57,7 +57,6 @@ class OtelDemoApplication : Application() {
             rum = Honeycomb.configure(this, options)
             Log.d(TAG, "RUM session started with service: $serviceName")
             // Initialize the singleton tracer here
-            appTracer = rum?.openTelemetry?.getTracer("otel.demo.app", "1.0.0")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize Honeycomb!", e)
         }
@@ -76,7 +75,7 @@ class OtelDemoApplication : Application() {
         var apiEndpoint: String = "https://www.zurelia.honeydemo.io/api"
 
         fun getTracer(): Tracer? {
-            return appTracer
+            return rum?.openTelemetry?.getTracer("otel.demo.app", "1.0.0")
         }
 
         fun counter(name: String): LongCounter? {
