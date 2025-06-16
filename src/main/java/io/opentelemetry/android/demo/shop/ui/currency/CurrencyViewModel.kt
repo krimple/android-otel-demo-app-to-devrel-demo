@@ -64,89 +64,73 @@ class CurrencyViewModel() : ViewModel() {
             return
         }
 
-        val tracer = OtelDemoApplication.getTracer()
-        val span = tracer?.spanBuilder("loadCurrencies")
-            ?.setAttribute(stringKey("component"), "currency_viewmodel")
-            ?.setAttribute(stringKey("user_action"), "load_available_currencies")
-            ?.setAttribute(stringKey("operation.type"), "currency_fetch")
-            ?.startSpan()
-
-        Log.d("otel.demo", "SPAN CREATED: loadCurrencies span=$span, tracer=$tracer")
-
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
 
             try {
-                span?.makeCurrent().use {
-                    val currencies = currencyApiService.fetchCurrencies()
-                    _availableCurrencies.value = currencies
-                    _isLoading.value = false
+                val currencies = currencyApiService.fetchCurrencies()
+                _availableCurrencies.value = currencies
+                _isLoading.value = false
 
-                    // Add success attributes to span
-                    span?.setAttribute(longKey("currencies.count"), currencies.size.toLong())
-                    span?.setAttribute(stringKey("currencies.loaded"), currencies.joinToString(","))
-                    span?.setAttribute(stringKey("operation.result"), "success")
-
-                    Log.d("otel.demo", "Currencies loaded successfully: ${currencies.size} currencies")
+                // Add attributes to the current span (created by fetchCurrencies)
+                val currentSpan = Span.current()
+                if (currentSpan.isRecording) {
+                    currentSpan.setAttribute("component", "currency_viewmodel")
+                    currentSpan.setAttribute("user_action", "load_available_currencies")
+                    currentSpan.setAttribute("viewmodel.operation", "loadCurrencies")
+                    currentSpan.setAttribute("currencies.loaded_count", currencies.size.toLong())
                 }
+
+                Log.d("otel.demo", "Currencies loaded successfully: ${currencies.size} currencies")
             } catch (e: Exception) {
                 Log.e("otel.demo", "Failed to load currencies: ${e.message}", e)
 
-                span?.setStatus(StatusCode.ERROR)
-                span?.recordException(e)
-                span?.setAttribute(stringKey("operation.result"), "error")
-                span?.setAttribute(stringKey("error.type"), e.javaClass.simpleName)
+                // Add error context to current span
+                val currentSpan = Span.current()
+                if (currentSpan.isRecording) {
+                    currentSpan.setAttribute("component", "currency_viewmodel")
+                    currentSpan.setAttribute("user_action", "load_available_currencies")
+                    currentSpan.setAttribute("viewmodel.operation", "loadCurrencies")
+                    currentSpan.setAttribute("viewmodel.error", "currency_load_failed")
+                }
 
                 _isLoading.value = false
                 _error.value = e.message ?: "Failed to load currencies"
-            } finally {
-                Log.d("otel.demo", "SPAN ENDED: loadCurrencies span=$span")
-                span?.end()
             }
         }
     }
 
     fun selectCurrency(currency: String) {
-        val tracer = OtelDemoApplication.getTracer()
-        val span = tracer?.spanBuilder("selectCurrency")
-            ?.setAttribute(stringKey("component"), "currency_viewmodel")
-            ?.setAttribute(stringKey("user_action"), "select_currency")
-            ?.setAttribute(stringKey("currency.requested"), currency)
-            ?.setAttribute(stringKey("currency.previous"), _selectedCurrency.value)
-            ?.startSpan()
+        if (_availableCurrencies.value.contains(currency)) {
+            _selectedCurrency.value = currency
+            saveCurrency(currency)
 
-        Log.d("otel.demo", "SPAN CREATED: selectCurrency span=$span, currency=$currency")
-
-        try {
-            span?.makeCurrent().use {
-                if (_availableCurrencies.value.contains(currency)) {
-                    _selectedCurrency.value = currency
-                    saveCurrency(currency)
-
-                    span?.setAttribute(stringKey("currency.selected"), currency)
-                    span?.setAttribute(stringKey("operation.result"), "success")
-                    span?.setAttribute(stringKey("currency.change.applied"), "true")
-
-                    Log.d("otel.demo", "Selected currency: $currency")
-                } else {
-                    span?.setAttribute(stringKey("operation.result"), "rejected")
-                    span?.setAttribute(stringKey("currency.change.applied"), "false")
-                    span?.setAttribute(stringKey("rejection.reason"), "currency_not_available")
-
-                    Log.w("otel.demo", "Currency $currency not available in loaded currencies")
-                }
+            // Add attributes to current span if available
+            val currentSpan = Span.current()
+            if (currentSpan.isRecording) {
+                currentSpan.setAttribute("component", "currency_viewmodel")
+                currentSpan.setAttribute("user_action", "select_currency")
+                currentSpan.setAttribute("currency.requested", currency)
+                currentSpan.setAttribute("currency.selected", currency)
+                currentSpan.setAttribute("currency.change.applied", "true")
+                currentSpan.setAttribute("viewmodel.operation", "selectCurrency")
             }
-        } catch (e: Exception) {
-            Log.e("otel.demo", "Failed to select currency: ${e.message}", e)
 
-            span?.setStatus(StatusCode.ERROR)
-            span?.recordException(e)
-            span?.setAttribute(stringKey("operation.result"), "error")
-            span?.setAttribute(stringKey("error.type"), e.javaClass.simpleName)
-        } finally {
-            Log.d("otel.demo", "SPAN ENDED: selectCurrency span=$span")
-            span?.end()
+            Log.d("otel.demo", "Selected currency: $currency")
+        } else {
+            // Add rejection context to current span if available
+            val currentSpan = Span.current()
+            if (currentSpan.isRecording) {
+                currentSpan.setAttribute("component", "currency_viewmodel")
+                currentSpan.setAttribute("user_action", "select_currency")
+                currentSpan.setAttribute("currency.requested", currency)
+                currentSpan.setAttribute("currency.change.applied", "false")
+                currentSpan.setAttribute("rejection.reason", "currency_not_available")
+                currentSpan.setAttribute("viewmodel.operation", "selectCurrency")
+            }
+
+            Log.w("otel.demo", "Currency $currency not available in loaded currencies")
         }
     }
 
