@@ -42,67 +42,67 @@ class CheckoutApiService(
             Log.d("CheckoutApiService", "SPAN IS NOW CURRENT: checkout.place_order span=$span")
             try {
                 val checkoutRequest = buildCheckoutRequest(cartViewModel, checkoutInfoViewModel, currencyCode)
-            
-            // Add checkout request attributes
-            span?.setAttribute(stringKey("checkout.user_id"), checkoutRequest.userId)
-            span?.setAttribute(stringKey("checkout.email"), checkoutRequest.email)
-            span?.setAttribute(stringKey("checkout.currency"), checkoutRequest.userCurrency)
-            span?.setAttribute(stringKey("checkout.address.city"), checkoutRequest.address.city)
-            span?.setAttribute(stringKey("checkout.address.state"), checkoutRequest.address.state)
-            span?.setAttribute(stringKey("checkout.address.country"), checkoutRequest.address.country)
-            span?.setAttribute(stringKey("checkout.address.zip_code"), checkoutRequest.address.zipCode)
-            span?.setAttribute(stringKey("checkout.credit_card.number_masked"), "****-****-****-${checkoutRequest.creditCard.creditCardNumber.takeLast(4)}")
-            span?.setAttribute(longKey("checkout.credit_card.expiry_month"), checkoutRequest.creditCard.creditCardExpirationMonth.toLong())
-            span?.setAttribute(longKey("checkout.credit_card.expiry_year"), checkoutRequest.creditCard.creditCardExpirationYear.toLong())
-            
-            // Add cart information
-            val cartItems = cartViewModel.cartItems.value
-            span?.setAttribute(longKey("checkout.cart.items_count"), cartItems.size.toLong())
-            span?.setAttribute(doubleKey("checkout.cart.total_price"), cartViewModel.getTotalPrice())
-            
-            cartItems.forEachIndexed { index, item ->
-                span?.setAttribute(stringKey("checkout.cart.item_${index}.product_id"), item.product.id)
-                span?.setAttribute(stringKey("checkout.cart.item_${index}.product_name"), item.product.name)
-                span?.setAttribute(longKey("checkout.cart.item_${index}.quantity"), item.quantity.toLong())
-                span?.setAttribute(doubleKey("checkout.cart.item_${index}.unit_price"), item.product.priceValue())
-                span?.setAttribute(doubleKey("checkout.cart.item_${index}.total_price"), item.totalPrice())
-            }
-            
-            val requestBody = Gson().toJson(checkoutRequest)
-            val checkoutUrl = "${OtelDemoApplication.apiEndpoint}/checkout?currencyCode=$currencyCode"
-            val request = Request.Builder()
-                .url(checkoutUrl)
-                .post(requestBody.toRequestBody(JSON_MEDIA_TYPE))
-                .build()
 
-            Log.d("CheckoutApiService", "BEFORE HTTP REQUEST: checkout.place_order span=$span, about to call FetchHelpers.executeRequest")
-            val responseBody = FetchHelpers.executeRequest(request)
-            Log.d("CheckoutApiService", "AFTER HTTP REQUEST: checkout.place_order span=$span, FetchHelpers.executeRequest completed")
-            val checkoutResponse = Gson().fromJson(responseBody, CheckoutResponse::class.java)
-            
-            // Add response attributes
-            span?.setAttribute(stringKey("checkout.response.order_id"), checkoutResponse.orderId)
-            span?.setAttribute(stringKey("checkout.response.shipping_tracking_id"), checkoutResponse.shippingTrackingId)
-            span?.setAttribute(doubleKey("checkout.response.shipping_cost"), checkoutResponse.shippingCost.toDouble())
-            span?.setAttribute(stringKey("checkout.response.shipping_cost.currency"), checkoutResponse.shippingCost.currencyCode)
-            span?.setAttribute(longKey("checkout.response.items_count"), checkoutResponse.items.size.toLong())
-            
-            var totalCost = 0.0
-            checkoutResponse.items.forEachIndexed { index, item ->
-                span?.setAttribute(stringKey("checkout.response.item_${index}.product_id"), item.item.productId)
-                span?.setAttribute(longKey("checkout.response.item_${index}.quantity"), item.item.quantity.toLong())
-                span?.setAttribute(doubleKey("checkout.response.item_${index}.cost"), item.cost.toDouble())
-                span?.setAttribute(stringKey("checkout.response.item_${index}.cost.currency"), item.cost.currencyCode)
-                totalCost += item.cost.toDouble()
-            }
-            
-            span?.setAttribute(doubleKey("checkout.response.total_item_cost"), totalCost)
-            span?.setAttribute(
-                doubleKey("checkout.response.total_order_cost"),
-                totalCost + checkoutResponse.shippingCost.toDouble())
+                // Add checkout request attributes
+                span?.setAttribute(stringKey("checkout.user_id"), checkoutRequest.userId)
+                span?.setAttribute(stringKey("checkout.email"), checkoutRequest.email)
+                span?.setAttribute(stringKey("checkout.currency"), checkoutRequest.userCurrency)
+                span?.setAttribute(stringKey("checkout.address.city"), checkoutRequest.address.city)
+                span?.setAttribute(stringKey("checkout.address.state"), checkoutRequest.address.state)
+                span?.setAttribute(stringKey("checkout.address.country"), checkoutRequest.address.country)
+                span?.setAttribute(stringKey("checkout.address.zip_code"), checkoutRequest.address.zipCode)
+                span?.setAttribute(stringKey("checkout.credit_card.number_masked"), "****-****-****-${checkoutRequest.creditCard.creditCardNumber.takeLast(4)}")
+                span?.setAttribute(longKey("checkout.credit_card.expiry_month"), checkoutRequest.creditCard.creditCardExpirationMonth.toLong())
+                span?.setAttribute(longKey("checkout.credit_card.expiry_year"), checkoutRequest.creditCard.creditCardExpirationYear.toLong())
 
-            // return this response
-            checkoutResponse
+                // Add cart information
+                val cartItems = cartViewModel.cartItems.value
+                span?.setAttribute(longKey("checkout.cart.items_count"), cartItems.size.toLong())
+                span?.setAttribute(doubleKey("checkout.cart.total_price"), cartViewModel.getTotalPrice())
+
+                cartItems.forEachIndexed { index, item ->
+                    span?.setAttribute(stringKey("checkout.cart.item_${index}.product_id"), item.product.id)
+                    span?.setAttribute(stringKey("checkout.cart.item_${index}.product_name"), item.product.name)
+                    span?.setAttribute(longKey("checkout.cart.item_${index}.quantity"), item.quantity.toLong())
+                    span?.setAttribute(doubleKey("checkout.cart.item_${index}.unit_price"), item.product.priceValue())
+                    span?.setAttribute(doubleKey("checkout.cart.item_${index}.total_price"), item.totalPrice())
+                }
+
+                val requestBody = Gson().toJson(checkoutRequest)
+                val checkoutUrl = "${OtelDemoApplication.apiEndpoint}/checkout?currencyCode=$currencyCode"
+                val request = Request.Builder()
+                    .url(checkoutUrl)
+                    .post(requestBody.toRequestBody(JSON_MEDIA_TYPE))
+                    .build()
+
+                Log.d("CheckoutApiService", "BEFORE HTTP REQUEST: checkout.place_order span=$span, about to call FetchHelpers.executeRequest")
+                val responseBody = FetchHelpers.executeRequest(request)
+                Log.d("CheckoutApiService", "AFTER HTTP REQUEST: checkout.place_order span=$span, FetchHelpers.executeRequest completed")
+                val checkoutResponse = Gson().fromJson(responseBody, CheckoutResponse::class.java)
+
+                // Add response attributes
+                span?.setAttribute(stringKey("checkout.response.order_id"), checkoutResponse.orderId)
+                span?.setAttribute(stringKey("checkout.response.shipping_tracking_id"), checkoutResponse.shippingTrackingId)
+                span?.setAttribute(doubleKey("checkout.response.shipping_cost"), checkoutResponse.shippingCost.toDouble())
+                span?.setAttribute(stringKey("checkout.response.shipping_cost.currency"), checkoutResponse.shippingCost.currencyCode)
+                span?.setAttribute(longKey("checkout.response.items_count"), checkoutResponse.items.size.toLong())
+
+                var totalCost = 0.0
+                checkoutResponse.items.forEachIndexed { index, item ->
+                    span?.setAttribute(stringKey("checkout.response.item_${index}.product_id"), item.item.productId)
+                    span?.setAttribute(longKey("checkout.response.item_${index}.quantity"), item.item.quantity.toLong())
+                    span?.setAttribute(doubleKey("checkout.response.item_${index}.cost"), item.cost.toDouble())
+                    span?.setAttribute(stringKey("checkout.response.item_${index}.cost.currency"), item.cost.currencyCode)
+                    totalCost += item.cost.toDouble()
+                }
+
+                span?.setAttribute(doubleKey("checkout.response.total_item_cost"), totalCost)
+                span?.setAttribute(
+                    doubleKey("checkout.response.total_order_cost"),
+                    totalCost + checkoutResponse.shippingCost.toDouble())
+
+                // return this response
+                checkoutResponse
             } catch (e: Exception) {
                 Log.d("CheckoutApiService", "SPAN ERROR: checkout.place_order span=$span, exception=${e.message}")
                 span?.recordException(e)
