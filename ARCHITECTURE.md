@@ -119,9 +119,71 @@ User Session (Root)
 ```
 
 ### Context Propagation Strategy
-- **Root Spans**: User interactions, UI events, standalone operations
-- **Child Spans**: API calls, background operations triggered by user actions
-- **Context Passing**: Explicit `Context.current()` usage in service calls
+
+#### Context Management Principles
+- **Root Spans**: User interactions, UI events, standalone operations that should start new traces
+- **Child Spans**: API calls, background operations triggered by user actions that should inherit context
+- **Context Isolation**: Clean coroutine launches without context propagation for isolated operations
+- **Context Cleanup**: Proper use of `makeCurrent().use { }` blocks for automatic context restoration
+
+#### Critical Context Management Patterns
+
+**✅ Correct Pattern - Isolated Operations:**
+```kotlin
+// Clean coroutine launch for independent operations
+coroutineScope.launch {
+    placeOrder(...)  // Starts its own trace context
+}
+```
+
+**❌ Incorrect Pattern - Context Leakage:**
+```kotlin
+// AVOID: Propagates ambient context to coroutine
+coroutineScope.launch(Context.current().asContextElement()) {
+    placeOrder(...)  // Inherits and contaminates trace context
+}
+```
+
+**✅ Correct Pattern - Context Scoping:**
+```kotlin
+// Proper span context management with automatic cleanup
+span?.makeCurrent()?.use {
+    // Operation runs with span as current context
+    // Context automatically restored when block exits
+}
+```
+
+#### Context Leak Prevention
+- **Coroutine Isolation**: Use `launch { }` without context elements for independent operations
+- **Span Lifecycle**: Both `makeCurrent().use { }` for context management AND `span.end()` for span cleanup
+- **Background Operations**: Explicit parent context passing rather than ambient context capture
+
+#### Resolved Issues: Trace Accumulation Fix
+
+**Problem Identified**: Trace `349eff370100498d2fc05fd58be5c903` contained 152 spans instead of the expected 3-5 Android spans, indicating context leakage where checkout operations contaminated subsequent user interactions.
+
+**Root Cause**: In `AstronomyShopActivity.kt`, the checkout operation was launched with:
+```kotlin
+coroutineScope.launch(Context.current().asContextElement()) {
+    placeOrder(...)
+}
+```
+
+This pattern captured the ambient OpenTelemetry context and propagated it to the coroutine, causing all subsequent operations in that scope to inherit the checkout trace context.
+
+**Solution Applied**: Changed to clean coroutine launch:
+```kotlin
+coroutineScope.launch {
+    placeOrder(...)
+}
+```
+
+**Results**: 
+- Trace `0a568b117ce51d6e2afc1a545425e884` now contains only 3 Android spans as expected
+- Each checkout operation creates an isolated trace that doesn't contaminate future operations
+- Proper trace boundaries maintained between different user interactions
+
+**Key Learning**: The `use` block from `makeCurrent()` only handles context restoration, not span ending. Both context management (`makeCurrent().use{}`) and span lifecycle management (`span.end()`) are required for proper cleanup.
 
 ### Resource Management with Use Blocks
 
