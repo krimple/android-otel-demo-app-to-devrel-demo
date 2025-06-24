@@ -12,10 +12,10 @@ class ProductCatalogClient {
    private val productApiService = ProductApiService()
 
     suspend fun getProducts(currencyCode: String = "USD", parentContext: OtelContext = OtelContext.current()): List<Product> {
-        return productApiService.fetchProducts(currencyCode, parentContext)
+        return productApiService.fetchProducts(currencyCode)
     }
 
     suspend fun getProduct(productId: String, currencyCode: String = "USD", parentContext: OtelContext = OtelContext.current()): Product {
-        return productApiService.fetchProduct(productId, currencyCode, parentContext)
+        return productApiService.fetchProduct(productId, currencyCode)
     }
 }

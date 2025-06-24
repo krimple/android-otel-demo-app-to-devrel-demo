@@ -7,8 +7,10 @@ import io.opentelemetry.android.demo.shop.clients.ProductApiService
 import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.api.common.AttributeKey.longKey
 import io.opentelemetry.api.common.AttributeKey.stringKey
+import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.context.Context
+import io.opentelemetry.extension.kotlin.asContextElement
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,39 +41,33 @@ class ProductListViewModel(
     }
     
     private fun loadProducts(currencyCode: String = "USD", isRefresh: Boolean = false) {
-        val tracer = OtelDemoApplication.tracer("astronomy-shop")
-        val span = tracer?.spanBuilder("loadProducts")
-            ?.setAttribute(stringKey("component"), "product_list")
-            ?.setAttribute("is_refresh", isRefresh)
-            ?.setAttribute(stringKey("currency.code"), currencyCode)
-            ?.setAttribute(stringKey("user_action"), "view_product_list")
-            ?.startSpan()
-        
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
 
+            var span: Span? = null
             try {
-                span?.makeCurrent().use {
-                    val currentContext = Context.current()
-                    val products = productApiService.fetchProducts(currencyCode, currentContext)
-                    _uiState.value = ProductListUiState(
-                        products = products,
-                        isLoading = false,
-                        errorMessage = null
-                    )
-                    span?.setAttribute(longKey("products.loaded"), products.size.toLong())
-                    span?.setAttribute(stringKey("operation.result"), "success")
-                }
+                val products = productApiService.fetchProducts(currencyCode)
+                _uiState.value = ProductListUiState(
+                  products = products,
+                  isLoading = false,
+                  errorMessage = null
+                )
+
+                // tack the attributes to the nested span
+                span = Span.current()
+
+                span?.setAttribute("component", "product_list")
+                span?.setAttribute("is_refresh", isRefresh)
+                span?.setAttribute("currency.code", currencyCode)
+                span?.setAttribute("user_action", "view_product_list")
+                span?.setAttribute("products.loaded", products.size.toLong())
+                span?.setAttribute("operation.result", "success")
             } catch (e: Exception) {
-                span?.setStatus(StatusCode.ERROR)
-                span?.recordException(e)
                 _uiState.value = ProductListUiState(
                     products = emptyList(),
                     isLoading = false,
                     errorMessage = e.message ?: "Failed to load products"
                 )
-            } finally {
-                span?.end()
             }
         }
     }

@@ -27,7 +27,7 @@ class ProductDetailViewModel(
     val uiState: StateFlow<ProductDetailUiState> = _uiState.asStateFlow()
     
     fun loadProduct(productId: String, currencyCode: String = "USD") {
-        val tracer = OtelDemoApplication.tracer("astronomy-shop")
+        val tracer = OtelDemoApplication.getTracer()
         val span = tracer?.spanBuilder("loadProductDetail")
             ?.setAttribute(stringKey("component"), "product_detail")
             ?.setAttribute(stringKey("product.id"), productId)
@@ -40,8 +40,7 @@ class ProductDetailViewModel(
 
             try {
                 span?.makeCurrent().use {
-                    val currentContext = Context.current()
-                    val product = productApiService.fetchProduct(productId, currencyCode, currentContext)
+                    val product = productApiService.fetchProduct(productId, currencyCode)
                     _uiState.value = ProductDetailUiState(
                         product = product,
                         isLoading = false,

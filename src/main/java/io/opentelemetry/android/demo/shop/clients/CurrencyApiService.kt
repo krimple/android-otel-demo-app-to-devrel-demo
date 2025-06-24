@@ -7,37 +7,46 @@ import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.context.Context
 import okhttp3.Request
 import android.util.Log
+import io.opentelemetry.api.trace.Span
+import io.opentelemetry.extension.kotlin.asContextElement
 
 class CurrencyApiService {
-    suspend fun fetchCurrencies(parentContext: Context = Context.current()): List<String> {
-        val tracer = OtelDemoApplication.tracer("astronomy-shop")
+    suspend fun fetchCurrencies(): List<String> {
         Log.d("otel.demo", "Fetching available currencies")
 
-        val span = tracer?.spanBuilder("fetchCurrencies")
-            ?.setParent(parentContext)
-            ?.startSpan()
+        val currencyUrl = "${OtelDemoApplication.apiEndpoint}/currency"
+        val request = Request.Builder()
+            .url(currencyUrl)
+            .get().build()
 
-        return try {
-            val currencyUrl = "${OtelDemoApplication.apiEndpoint}/currency"
-            Log.d("otel.demo", "Making request to: $currencyUrl")
-            val request = Request.Builder()
-                .url(currencyUrl)
-                .get().build()
+        try {
 
+            // make the actual call
             val bodyText = FetchHelpers.executeRequest(request)
+
             val listType = object : TypeToken<List<String>>() {}.type
-            Log.d("otel.demo", "Currency request completed successfully")
-            
-            span?.setAttribute("currencies.count", Gson().fromJson<List<String>>(bodyText, listType).size.toLong())
-            Gson().fromJson<List<String>>(bodyText, listType)
+            val currencies = Gson().fromJson<List<String>>(bodyText, listType)
+
+            // post-call enrichment of OK HTTP span
+            val currentSpan = Span.current()
+            if (currentSpan.isRecording) {
+                currentSpan.setAttribute("operation.type", "fetch_currencies")
+                currentSpan.setAttribute("component", "currency_service")
+                currentSpan.setAttribute("currencies.count", currencies.size.toLong())
+                currentSpan.setAttribute("currencies.list", currencies.joinToString(","))
+                currentSpan.updateName("fetchCurrencies") // Change from "executeRequest" to business name
+            }
+            return currencies
         } catch (e: Exception) {
-            Log.d("otel.demo", "Currency request failed with exception: ${e.message}")
-            span?.setStatus(StatusCode.ERROR)
-            span?.recordException(e)
+            val currentSpan = Span.current()
+            if (currentSpan.isRecording) {
+                currentSpan.setAttribute("operation.type", "fetch_currencies")
+                currentSpan.setAttribute("component", "currency_service")
+                currentSpan.setAttribute("business.error", "failed_to_fetch_currencies")
+                currentSpan.updateName("fetchCurrencies")
+                // Note: FetchHelpers already set ERROR status and recorded the HTTP exception
+            }
             throw e
-        } finally {
-            Log.d("otel.demo", "Ending currency span: $span")
-            span?.end()
         }
     }
 }

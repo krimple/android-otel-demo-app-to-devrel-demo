@@ -71,16 +71,19 @@ class CheckoutApiServiceTest {
     }
 
     @Test
-    fun `placeOrder supports currency parameter`() = runTest {
-        // Test that placeOrder method supports currency parameter
+    fun `placeOrder has correct method signature`() = runTest {
+        // Test that placeOrder method exists with correct signature
         val methods = checkoutApiService::class.java.methods.filter { it.name == "placeOrder" }
         assertFalse("placeOrder methods should exist", methods.isEmpty())
-        
-        // Should have a method that takes currencyCode parameter
-        val methodWithCurrency = methods.find { method ->
-            method.parameterTypes.any { it == String::class.java }
+
+        // The placeOrder method is a suspend function, so it will have an additional Continuation parameter
+        // Look for a method that has CartViewModel and CheckoutInfoViewModel in its parameters
+        val correctMethod = methods.find { method ->
+            val paramTypes = method.parameterTypes.map { it.simpleName }
+            paramTypes.any { it.contains("CartViewModel") } &&
+            paramTypes.any { it.contains("CheckoutInfoViewModel") }
         }
-        assertNotNull("placeOrder should support currency parameter", methodWithCurrency)
+        assertNotNull("placeOrder should have correct signature with CartViewModel and CheckoutInfoViewModel", correctMethod)
     }
 
     @Test

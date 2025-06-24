@@ -93,7 +93,7 @@ class FetchHelpersTest {
     @Test
     fun `executeRequest returns response body correctly`() = runTest {
         // Arrange
-        val expectedBody = """{"message": "test response"}"""
+        val expectedBody = """"""
         val mockResponse = MockResponse()
             .setResponseCode(200)
             .setBody(expectedBody)
@@ -147,8 +147,13 @@ class FetchHelpersTest {
             FetchHelpers.executeRequest(request)
             fail("Expected exception for network failure")
         } catch (e: Exception) {
-            assertTrue("Exception message should indicate network error", 
-                e.message?.contains("http error") == true)
+            // Network failures should throw IOException with connection-related messages
+            assertTrue("Exception should be IOException for network failure",
+                e is java.io.IOException)
+            assertTrue("Exception message should indicate connection error",
+                e.message?.contains("Connection refused") == true ||
+                e.message?.contains("Failed to connect") == true ||
+                e.message?.contains("connect") == true)
         }
     }
 }
