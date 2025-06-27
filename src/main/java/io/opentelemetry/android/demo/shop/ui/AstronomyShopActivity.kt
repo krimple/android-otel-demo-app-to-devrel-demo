@@ -3,6 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/*
+ * Modified from original at:
+ * https://github.com/open-telemetry/opentelemetry-android/blob/main/demo-app/src/main/java/io/opentelemetry/android/demo/shop/ui/AstronomyShopActivity.kt
+ * 
+ * Changes: Modified to use Honeycomb SDK and add additional telemetry and features.
+ */
+
 package io.opentelemetry.android.demo.shop.ui
 
 import android.app.Activity

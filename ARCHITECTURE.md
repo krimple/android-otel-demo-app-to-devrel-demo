@@ -6,22 +6,25 @@ This document describes the architecture of the Android OpenTelemetry Demo Appli
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Android App   │────│  OTel Collector │────│   Honeycomb     │
-│                 │    │                 │    │                 │
-│ - UI (Compose)  │    │ - OTLP Receiver │    │ - Trace Storage │
-│ - ViewModels    │    │ - Processing    │    │ - Analytics     │
-│ - API Clients   │    │ - Export        │    │ - Dashboards    │
+│   Android App   │────│   Honeycomb     │    │  OTel Collector │
+│                 │    │                 │    │   (Optional)    │
+│ - UI (Compose)  │    │ - RUM SDK       │    │                 │
+│ - ViewModels    │    │ - Trace Storage │    │ - OTLP Receiver │
+│ - API Clients   │    │ - Analytics     │    │ - Debug Export  │
+│ - Manual Spans  │    │ - Dashboards    │    │ - Local Dev     │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │
-         │                       │
-         └───────────────────────┴──────────────────┐
-                                                    │
-                                          ┌─────────────────┐
-                                          │     Jaeger      │
-                                          │                 │
-                                          │ - Local Traces  │
-                                          │ - Debug UI      │
-                                          └─────────────────┘
+         │                       │                       │
+         │                       │                       │
+         └───────────────────────┴───────────────────────┘
+                                 │
+                       ┌─────────────────┐
+                       │  Backend APIs   │
+                       │                 │
+                       │ - Product API   │
+                       │ - Currency API  │
+                       │ - Shipping API  │
+                       │ - Checkout API  │
+                       └─────────────────┘
 ```
 
 ## Application Architecture
@@ -70,29 +73,35 @@ The app follows Model-View-ViewModel (MVVM) architecture:
   - `CheckoutConfirmation` - Order completion
 
 #### 3. ViewModel Layer
-- **`ProductListViewModel`**: Manages product catalog with lifecycle-aware loading
-- **`ProductDetailViewModel`**: Handles individual product data and recommendations
+- **`ProductListViewModel`**: Manages product catalog with lifecycle-aware loading and currency support
+- **`ProductDetailViewModel`**: Handles individual product data with currency conversion
 - **`CartViewModel`**: Shopping cart state and operations
-- **`CheckoutInfoViewModel`**: Purchase flow management
+- **`CheckoutInfoViewModel`**: Purchase flow management with shipping cost calculation
+- **`CurrencyViewModel`**: Currency selection and management
 
 #### 4. Service Layer
-- **`ProductApiService`**: Product catalog API interactions
-- **`CheckoutApiService`**: Order processing and payment
-- **`RecommendationService`**: Product recommendations
-- **`FetchHelpers`**: Shared HTTP request utilities
+- **`ProductApiService`**: Product catalog API interactions with currency parameter support
+- **`CheckoutApiService`**: Order processing and payment with currency and shipping support
+- **`CurrencyApiService`**: Available currencies fetching with comprehensive telemetry
+- **`ShippingApiService`**: Shipping cost calculation via checkout preview API
+- **`FetchHelpers`**: Shared HTTP request utilities with telemetry integration
 
 #### 5. Model Layer
-- **`Product`**: Product data model
-- **`CheckoutModels`**: Order and payment models
-- **`PriceUsd`**: Currency handling
+- **`Product`**: Product data model with currency-aware pricing
+- **`CheckoutModels`**: Order and payment models with currency and shipping support
+- **`Money`**: Multi-currency support with localized formatting
+- **`Currency`**: Currency data model for 33+ supported currencies
+- **`ShippingInfo`**: Shipping address and cost calculation models
 
 ## OpenTelemetry Integration
 
 ### Telemetry Stack
-- **Honeycomb Android SDK**: RUM (Real User Monitoring)
-- **OpenTelemetry Android SDK**: Core instrumentation
-- **Auto-Instrumentation**: Lifecycle, crashes, ANRs, network requests
-- **Manual Instrumentation**: Business logic spans and events
+- **Honeycomb Android SDK (0.0.11)**: Primary RUM (Real User Monitoring) backend
+- **OpenTelemetry Android SDK (0.11.0-alpha)**: Core instrumentation framework
+- **OpenTelemetry Core (1.49.0)**: Telemetry APIs and context management
+- **Auto-Instrumentation**: Activity lifecycle, crashes, ANRs, slow renders, HTTP requests (OkHttp)
+- **Manual Instrumentation**: Business logic spans, user interactions, API boundaries
+- **ByteBuddy**: Runtime instrumentation for OkHttp auto-instrumentation
 
 ### Instrumentation Patterns
 
@@ -247,6 +256,59 @@ fun loadData() {
 
 This pattern ensures robust telemetry collection while maintaining clean, readable code that automatically handles resource cleanup.
 
+## Multi-Currency and Shipping Architecture
+
+### Currency Support System
+The application implements comprehensive multi-currency support with real-time pricing and localized formatting:
+
+#### Currency Management
+- **33+ Supported Currencies**: Fetched dynamically from `/api/currency` endpoint
+- **Persistent Selection**: User currency preference stored in SharedPreferences with USD default
+- **Real-time Conversion**: All product APIs support `?currencyCode=` parameter for dynamic pricing
+- **Localized Display**: Major currencies (USD, EUR, GBP, JPY) show proper symbols; others use "CODE amount" format
+
+#### UI Components
+- **CurrencyToggle**: Quick switcher for common currencies in product list header
+- **CurrencyBottomSheet**: Full currency picker with search functionality
+- **Consistent Formatting**: `Money.formatCurrency()` extension handles all display logic
+
+#### Architecture Integration
+- **CurrencyApiService**: Fetches available currencies with full OpenTelemetry instrumentation
+- **CurrencyViewModel**: Manages currency state, persistence, and loading with error handling
+- **Enhanced ViewModels**: ProductListViewModel and ProductDetailViewModel updated for currency support
+
+### Shipping Cost Calculation
+The application calculates shipping costs using a preview-based approach:
+
+#### Calculation Method
+- **Preview API**: Uses checkout API with preview flag to calculate shipping without placing orders
+- **Real-time Updates**: Triggered automatically when shipping information becomes complete
+- **Currency Integration**: Shipping costs calculated and displayed in selected currency
+- **Graceful Degradation**: Fallback handling when shipping API unavailable
+
+#### Implementation Components
+- **ShippingApiService**: Calculates costs via checkout API preview mechanism
+- **CheckoutInfoViewModel**: Manages shipping state, loading, and cost display
+- **Client-side Cart**: Mobile-optimized cart state maintained on device vs server sessions
+
+### Comprehensive Telemetry Integration
+All currency and shipping operations include detailed OpenTelemetry instrumentation:
+
+#### Currency Telemetry
+- **Product Loading**: `currency.code` attribute on all product-related spans
+- **Currency Fetching**: `currencies.count` attribute when loading available currencies
+- **User Actions**: Currency selection events tracked as discrete user interactions
+
+#### Shipping Telemetry
+- **Cost Calculation**: `shipping.cost.value` and `shipping.cost.currency` attributes
+- **Method Tracking**: `shipping.calculation.method` (preview vs actual) differentiation
+- **Performance Monitoring**: Shipping calculation timing and error rate tracking
+
+#### Order Telemetry
+- **Complete Context**: Currency and shipping data included in all order-related spans
+- **Order Totals**: Currency-aware order totals and tax calculations
+- **Business Metrics**: Order value, currency distribution, and shipping cost analytics
+
 ## Data Flow
 
 ### Product Loading Flow
@@ -256,12 +318,12 @@ UI Compose
 ProductListViewModel.refreshProducts()
     ↓ First load: isRefresh=false | Subsequent: isRefresh=true
 ProductListViewModel.loadProducts()
-    ↓ With telemetry span
-ProductApiService.fetchProducts()
-    ↓ HTTP request with context
+    ↓ With telemetry span + currency.code attribute
+ProductApiService.fetchProducts(currencyCode)
+    ↓ HTTP request with ?currencyCode= parameter
 Backend API
-    ↓ Response
-UI State Update
+    ↓ Currency-converted pricing response
+UI State Update with localized formatting
 ```
 
 ### Shopping Cart Flow
@@ -277,11 +339,24 @@ UI Recomposition
 
 ### Checkout Flow
 ```
-Cart UI → CheckoutInfo UI → Payment Processing → Confirmation
-    ↓           ↓                    ↓               ↓
-CartViewModel → CheckoutViewModel → CheckoutApiService → UI Update
-    ↓           ↓                    ↓               ↓
-  Telemetry   Form State         Payment Span    Success Event
+Cart UI → CheckoutInfo UI → Shipping Calculation → Payment Processing → Confirmation
+    ↓           ↓                    ↓                      ↓               ↓
+CartViewModel → CheckoutViewModel → ShippingApiService → CheckoutApiService → UI Update
+    ↓           ↓                    ↓                      ↓               ↓
+  Telemetry   Form + Currency    Shipping Span        Payment + Currency  Success Event
+```
+
+### Currency Selection Flow
+```
+Product List UI
+    ↓ User taps currency toggle
+CurrencyViewModel.selectCurrency()
+    ↓ Persistence + telemetry event
+SharedPreferences.save()
+    ↓ State propagation
+ProductListViewModel.loadProducts(newCurrency)
+    ↓ Real-time price updates
+UI Recomposition with new prices
 ```
 
 ## Performance Considerations
@@ -325,9 +400,24 @@ CartViewModel → CheckoutViewModel → CheckoutApiService → UI Update
 - **Testing**: JUnit + Mockito + Robolectric
 
 ### Configuration
-- **Environments**: Debug/Release with different telemetry endpoints
-- **API Keys**: Local properties for Honeycomb configuration
-- **Network**: OkHttp with auto-instrumentation
-- **Collector**: Local OTLP endpoint for development
+- **Environments**: Debug/Release with configurable API and telemetry endpoints
+- **API Keys**: `otel.properties` file for Honeycomb configuration (HONEYCOMB_API_KEY, SERVICE_NAME, etc.)
+- **Backend APIs**: Configurable base URL (local: `http://10.0.2.2:9191`, production: `https://www.zurelia.honeydemo.io`)
+- **Network**: OkHttp with ByteBuddy auto-instrumentation
+- **Telemetry**: Direct Honeycomb integration via Android SDK
+- **Local Development**: Optional OTel Collector with Docker Compose for debugging
+
+### API Endpoints
+The Android app integrates with the following REST API endpoints:
+- **GET /api/currency** - Fetch available currencies (33+ supported)
+- **GET /api/products?currencyCode={code}** - Product catalog with currency-converted pricing
+- **GET /api/products/{id}?currencyCode={code}** - Individual product with currency pricing
+- **POST /api/checkout?currencyCode={code}** - Order placement with currency and shipping
+- **GET /images/products/{picture}** - Product images served relative to API base URL
+
+### Local Development Infrastructure
+Optional Docker Compose setup provides:
+- **OTel Collector**: OTLP receiver (gRPC:4317, HTTP:4318) with debug export to Honeycomb
+- **Environment Variables**: `HONEYCOMB_API_KEY` for collector configuration
 
 This architecture provides a production-ready example of observability patterns in Android applications while maintaining clean separation of concerns and testability.

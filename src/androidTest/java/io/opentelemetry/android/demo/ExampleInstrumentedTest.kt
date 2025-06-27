@@ -3,6 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/*
+ * Modified from original at:
+ * https://github.com/open-telemetry/opentelemetry-android/blob/main/demo-app/src/androidTest/java/io/opentelemetry/android/demo/ExampleInstrumentedTest.kt
+ * 
+ * Changes: Modified to use Honeycomb SDK and add additional telemetry and features.
+ */
+
 package io.opentelemetry.android.demo
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
