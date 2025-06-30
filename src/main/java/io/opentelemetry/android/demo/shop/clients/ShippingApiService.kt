@@ -26,10 +26,11 @@ class ShippingApiService {
         val tracer = OtelDemoApplication.getTracer()
         Log.d("otel.demo", "Getting shipping cost preview for ${cartViewModel.cartItems.value.size} items")
 
-        val span = tracer?.spanBuilder("getShippingCost")
+        val span = tracer?.spanBuilder("ShippingAPIService.getShippingCost")
             ?.setParent(parentContext)
-            ?.setAttribute("currency.code", currencyCode)
-            ?.setAttribute("shipping.items.count", cartViewModel.cartItems.value.size.toLong())
+            ?.setAttribute("app.user.currency", currencyCode)
+            ?.setAttribute("app.cart.items.count", cartViewModel.cartItems.value.size.toLong())
+            ?.setAttribute("app.operation.type", "calculate_shipping")
             ?.startSpan()
 
         // Use checkout API as preview to get shipping cost
@@ -78,20 +79,15 @@ class ShippingApiService {
                 
                 Log.d("otel.demo", "Shipping preview completed - cost: ${checkoutResponse.shippingCost.formatCurrency()}")
                 
-                span?.setAttribute("shipping.cost.value", checkoutResponse.shippingCost.toDouble())
-                span?.setAttribute("shipping.cost.currency", checkoutResponse.shippingCost.currencyCode)
-                span?.setAttribute("shipping.preview", true)
+                span?.setAttribute("app.shipping.cost", checkoutResponse.shippingCost.toDouble())
+                span?.setAttribute("app.operation.status", "success")
                 
                 checkoutResponse.shippingCost
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
             span?.recordException(e)
-            span?.setAttribute("shipping.calculation.failed", true)
-            span?.setAttribute("shipping.calculation.error.type", e.javaClass.simpleName)
-            span?.setAttribute("shipping.calculation.error.message", e.message ?: "Unknown error")
-            span?.setAttribute("shipping.calculation.request.url", checkoutUrl)
-            span?.setAttribute("shipping.calculation.fallback.cost", 0.0)
+            span?.setAttribute("app.operation.status", "failed")
             Log.d("otel.demo", "Shipping preview request failed, returning zero cost fallback")
             // Return zero cost as fallback
             Money(currencyCode = currencyCode, units = 0, nanos = 0)

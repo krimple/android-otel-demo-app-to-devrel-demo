@@ -30,20 +30,18 @@ class CurrencyApiService {
             // post-call enrichment of OK HTTP span
             val currentSpan = Span.current()
             if (currentSpan.isRecording) {
-                currentSpan.setAttribute("operation.type", "fetch_currencies")
-                currentSpan.setAttribute("component", "currency_service")
-                currentSpan.setAttribute("currencies.count", currencies.size.toLong())
-                currentSpan.setAttribute("currencies.list", currencies.joinToString(","))
-                currentSpan.updateName("fetchCurrencies") // Change from "executeRequest" to business name
+                currentSpan.setAttribute("app.operation.type", "fetch_currencies")
+                currentSpan.setAttribute("app.currencies.count", currencies.size.toLong())
+                currentSpan.setAttribute("app.operation.status", "success")
+                currentSpan.updateName("CurrencyAPIService.fetchCurrencies") // Change from "executeRequest" to business name
             }
             return currencies
         } catch (e: Exception) {
             val currentSpan = Span.current()
             if (currentSpan.isRecording) {
-                currentSpan.setAttribute("operation.type", "fetch_currencies")
-                currentSpan.setAttribute("component", "currency_service")
-                currentSpan.setAttribute("business.error", "failed_to_fetch_currencies")
-                currentSpan.updateName("fetchCurrencies")
+                currentSpan.setAttribute("app.operation.type", "fetch_currencies")
+                currentSpan.setAttribute("app.operation.status", "failed")
+                currentSpan.updateName("CurrencyAPIService.fetchCurrencies")
                 // Note: FetchHelpers already set ERROR status and recorded the HTTP exception
             }
             throw e

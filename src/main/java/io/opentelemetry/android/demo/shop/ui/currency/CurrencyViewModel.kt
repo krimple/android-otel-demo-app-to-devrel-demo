@@ -76,10 +76,10 @@ class CurrencyViewModel() : ViewModel() {
                 // Add attributes to the current span (created by fetchCurrencies)
                 val currentSpan = Span.current()
                 if (currentSpan.isRecording) {
-                    currentSpan.setAttribute("component", "currency_viewmodel")
-                    currentSpan.setAttribute("user_action", "load_available_currencies")
-                    currentSpan.setAttribute("viewmodel.operation", "loadCurrencies")
-                    currentSpan.setAttribute("currencies.loaded_count", currencies.size.toLong())
+                    currentSpan.setAttribute("app.view.model", "CurrencyViewModel")
+                    currentSpan.setAttribute("app.operation.type", "load_available_currencies")
+                    currentSpan.setAttribute("app.currencies.count", currencies.size.toLong())
+                    currentSpan.setAttribute("app.operation.status", "success")
                 }
 
                 Log.d("otel.demo", "Currencies loaded successfully: ${currencies.size} currencies")
@@ -89,10 +89,9 @@ class CurrencyViewModel() : ViewModel() {
                 // Add error context to current span
                 val currentSpan = Span.current()
                 if (currentSpan.isRecording) {
-                    currentSpan.setAttribute("component", "currency_viewmodel")
-                    currentSpan.setAttribute("user_action", "load_available_currencies")
-                    currentSpan.setAttribute("viewmodel.operation", "loadCurrencies")
-                    currentSpan.setAttribute("viewmodel.error", "currency_load_failed")
+                    currentSpan.setAttribute("app.view.model", "CurrencyViewModel")
+                    currentSpan.setAttribute("app.operation.type", "load_available_currencies")
+                    currentSpan.setAttribute("app.operation.status", "failed")
                 }
 
                 _isLoading.value = false
@@ -109,12 +108,10 @@ class CurrencyViewModel() : ViewModel() {
             // Add attributes to current span if available
             val currentSpan = Span.current()
             if (currentSpan.isRecording) {
-                currentSpan.setAttribute("component", "currency_viewmodel")
-                currentSpan.setAttribute("user_action", "select_currency")
-                currentSpan.setAttribute("currency.requested", currency)
-                currentSpan.setAttribute("currency.selected", currency)
-                currentSpan.setAttribute("currency.change.applied", "true")
-                currentSpan.setAttribute("viewmodel.operation", "selectCurrency")
+                currentSpan.setAttribute("app.view.model", "CurrencyViewModel")
+                currentSpan.setAttribute("app.operation.type", "select_currency")
+                currentSpan.setAttribute("app.user.currency", currency)
+                currentSpan.setAttribute("app.operation.status", "success")
             }
 
             Log.d("otel.demo", "Selected currency: $currency")
@@ -122,12 +119,10 @@ class CurrencyViewModel() : ViewModel() {
             // Add rejection context to current span if available
             val currentSpan = Span.current()
             if (currentSpan.isRecording) {
-                currentSpan.setAttribute("component", "currency_viewmodel")
-                currentSpan.setAttribute("user_action", "select_currency")
-                currentSpan.setAttribute("currency.requested", currency)
-                currentSpan.setAttribute("currency.change.applied", "false")
-                currentSpan.setAttribute("rejection.reason", "currency_not_available")
-                currentSpan.setAttribute("viewmodel.operation", "selectCurrency")
+                currentSpan.setAttribute("app.view.model", "CurrencyViewModel")
+                currentSpan.setAttribute("app.operation.type", "select_currency")
+                currentSpan.setAttribute("app.user.currency", currency)
+                currentSpan.setAttribute("app.operation.status", "failed")
             }
 
             Log.w("otel.demo", "Currency $currency not available in loaded currencies")
