@@ -41,10 +41,18 @@ class ProductListViewModel(
     }
     
     private fun loadProducts(currencyCode: String = "USD", isRefresh: Boolean = false) {
+        val tracer = OtelDemoApplication.getTracer()
+        val span = tracer?.spanBuilder("ProductListViewModel.loadProducts")
+            ?.setAttribute("app.operation.is.refresh", isRefresh)
+            ?.setAttribute("app.operation.type", "view_product_list")
+            ?.setAttribute("app.view.model", "ProductListViewModel")
+            ?.setAttribute("app.user.currency", currencyCode)
+            ?.setAttribute("app.screen.name", "product_list")
+            ?.startSpan()
+        
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
 
-            var span: Span? = null
             try {
                 val products = productApiService.fetchProducts(currencyCode)
                 _uiState.value = ProductListUiState(
@@ -53,21 +61,20 @@ class ProductListViewModel(
                   errorMessage = null
                 )
 
-                // tack the attributes to the nested span
-                span = Span.current()
-
-                span?.setAttribute("component", "product_list")
-                span?.setAttribute("is_refresh", isRefresh)
-                span?.setAttribute("currency.code", currencyCode)
-                span?.setAttribute("user_action", "view_product_list")
-                span?.setAttribute("products.loaded", products.size.toLong())
-                span?.setAttribute("operation.result", "success")
+                span?.setAttribute("app.products.count", products.size.toLong())
+                span?.setAttribute("app.operation.status", "success")
+                
             } catch (e: Exception) {
                 _uiState.value = ProductListUiState(
                     products = emptyList(),
                     isLoading = false,
                     errorMessage = e.message ?: "Failed to load products"
                 )
+                
+                span?.setAttribute("app.operation.status", "failed")
+                span?.recordException(e)
+            } finally {
+                span?.end()
             }
         }
     }

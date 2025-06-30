@@ -137,7 +137,7 @@ fun AstronomyShopScreen() {
                     composable(MainDestinations.CHECKOUT_INFO_ROUTE) {
                         InfoScreen(
                             onPlaceOrderClick = {
-                                coroutineScope.launch (Context.current().asContextElement()){
+                                coroutineScope.launch {
                                     placeOrder(
                                         astronomyShopNavController = astronomyShopNavController,
                                         cartViewModel = cartViewModel,
@@ -170,50 +170,17 @@ private suspend fun placeOrder(
     checkoutInfoViewModel: CheckoutInfoViewModel,
     checkoutApiService: CheckoutApiService,
 ){
-    val tracer = OtelDemoApplication.getTracer()
-    val span = tracer?.spanBuilder("placeOrder")?.startSpan()
     try {
         val checkoutResponse = checkoutApiService.placeOrder(cartViewModel, checkoutInfoViewModel)
         checkoutInfoViewModel.updateCheckoutResponse(checkoutResponse)
-        generateOrderPlacedEvent(cartViewModel, checkoutInfoViewModel)
         cartViewModel.clearCart()
         astronomyShopNavController.navigateToCheckoutConfirmation()
     } catch (e: Exception) {
-        span?.recordException(e)
-        OtelDemoApplication.rum?.let { Honeycomb.logException(it, e) }
-        e.printStackTrace()
-        // TODO show error view when failed in UI
-        generateOrderPlacedEvent(cartViewModel, checkoutInfoViewModel)
-        cartViewModel.clearCart()
-        astronomyShopNavController.navigateToCheckoutConfirmation()
-    } finally {
-        span?.end()
+        // TODO alert the user!
+        Log.e("CheckoutApiService", "Failed to place order: ${e.message}", e)
     }
+
 }
 
-private fun generateOrderPlacedEvent(
-    cartViewModel: CartViewModel,
-    checkoutInfoViewModel: CheckoutInfoViewModel
-) {
-
-    val tracer = OtelDemoApplication.getTracer()
-    val span = tracer?.spanBuilder("orderPlaced")
-        ?.setAttribute(doubleKey("order.total.value"), cartViewModel.getTotalPrice())
-        ?.setAttribute(stringKey("buyer.state"), checkoutInfoViewModel.shippingInfo.state)
-        ?.startSpan()
-
-    try {
-        span?.makeCurrent().use {
-            val eventBuilder = OtelDemoApplication.eventBuilder("otel.demo.app", "order.placed")
-            eventBuilder
-                ?.setAttribute(doubleKey("order.total.value"), cartViewModel.getTotalPrice())
-                ?.setAttribute(stringKey("buyer.state"), checkoutInfoViewModel.shippingInfo.state)
-                ?.emit()
-        }
-    } finally {
-        Log.d("AstronomyShopActivity", "SPAN ENDING: orderPlaced span=$span")
-        span?.end()
-        Log.d("AstronomyShopActivity", "SPAN ENDED: orderPlaced span=$span")
-    }
-}
+// Removed generateOrderPlacedEvent function - consolidated into placeOrder span
 

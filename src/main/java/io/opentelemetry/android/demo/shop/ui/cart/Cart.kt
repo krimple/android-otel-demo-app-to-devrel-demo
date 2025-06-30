@@ -96,12 +96,15 @@ fun CartScreen(
 }
 
 private fun clearCart(cartViewModel: CartViewModel) {
-    generateEmptiedCartEvent(cartViewModel)
+    val tracer = OtelDemoApplication.getTracer()
+    val span = tracer?.spanBuilder("cart.clear")
+        ?.setAttribute("app.cart.total.cost", cartViewModel.getTotalPrice())
+        ?.setAttribute("app.cart.items.count", cartViewModel.cartItems.value.size.toLong())
+        ?.setAttribute("app.operation.type", "clear_cart")
+        ?.setAttribute("app.screen.name", "cart")
+        ?.setAttribute("app.interaction.type", "tap")
+        ?.startSpan()
+    
     cartViewModel.clearCart()
-}
-
-private fun generateEmptiedCartEvent(cartViewModel: CartViewModel) {
-    val eventBuilder = OtelDemoApplication.eventBuilder("otel.demo.app", "cart.emptied")
-    eventBuilder?.setAttribute(doubleKey("cart.total.value"), cartViewModel.getTotalPrice())
-        ?.emit()
+    span?.end()
 }

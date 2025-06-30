@@ -94,54 +94,46 @@ class CheckoutInfoViewModel : ViewModel() {
 
         viewModelScope.launch {
             if (!shippingInfo.isComplete() || cartViewModel.cartItems.value.isEmpty()) {
-                // what do we do with this??? do we really want a span for this?
                 val span = tracer?.spanBuilder("skipCalculateShippingCost")
-                ?.setAttribute("shipping.calculation.skipped", true)
-                ?.setAttribute("shipping.calculation.skip_reason",
-                  if (!shippingInfo.isComplete()) "incomplete_shipping_info" else "empty_cart")                    ?.setAttribute("currency.code", currencyCode)
+                ?.setAttribute("app.shipping.calculation.skipped", true)
+                ?.setAttribute("app.shipping.calculation.skip.reason",
+                  if (!shippingInfo.isComplete()) "incomplete_shipping_info" else "empty_cart")
+                ?.setAttribute("app.user.currency", currencyCode)
+                ?.setAttribute("app.view.model", "CheckoutInfoViewModel")
+                ?.setAttribute("app.operation.type", "skip_shipping_calculation")
                 ?.startSpan()
                 shippingCost = null
                 span?.end()
             } else {
-                // ok, we need to calculate shipping cost after all
                 val span = tracer?.spanBuilder("calculateShippingCost")
-                    ?.setAttribute("currency.code", currencyCode)
-                    ?.setAttribute("shipping.info.complete", shippingInfo.isComplete())
-                    ?.setAttribute("cart.items.count", cartViewModel.cartItems.value.size.toLong())
-                    ?.setAttribute("shipping.info.email", shippingInfo.email)
-                    ?.setAttribute("shipping.info.city", shippingInfo.city)
-                    ?.setAttribute("shipping.info.state", shippingInfo.state)
-                    ?.setAttribute("shipping.info.country", shippingInfo.country)
-                    ?.setAttribute("shipping.info.zip_code", shippingInfo.zipCode)
+                    ?.setAttribute("app.user.currency", currencyCode)
+                    ?.setAttribute("app.shipping.info.complete", shippingInfo.isComplete())
+                    ?.setAttribute("app.cart.items.count", cartViewModel.cartItems.value.size.toLong())
+                    ?.setAttribute("app.shipping.address.city", shippingInfo.city)
+                    ?.setAttribute("app.shipping.address.state", shippingInfo.state)
+                    ?.setAttribute("app.shipping.address.country", shippingInfo.country)
+                    ?.setAttribute("app.view.model", "CheckoutInfoViewModel")
+                    ?.setAttribute("app.operation.type", "calculate_shipping")
                     ?.startSpan()
                 span?.makeCurrent().use {
                     isCalculatingShipping = true
                     shippingCalculationError = null
 
                     try {
-                        span?.setAttribute("shipping.calculation.started", true)
+                        span?.setAttribute("app.shipping.calculation.started", true)
                         val cost = shippingApiService.getShippingCost(
                             cartViewModel = cartViewModel,
                             checkoutInfoViewModel = this@CheckoutInfoViewModel,
                             currencyCode = currencyCode
                         )
                         shippingCost = cost
-                        span?.setAttribute("shipping.calculation.success", true)
-                        span?.setAttribute("shipping.cost.calculated.value", cost.toDouble())
-                        span?.setAttribute("shipping.cost.calculated.currency", cost.currencyCode)
+                        span?.setAttribute("app.operation.status", "success")
+                        span?.setAttribute("app.shipping.cost", cost.toDouble())
                         hasCalculatedShipping = true
                     } catch (e: Exception) {
                         span?.setStatus(StatusCode.ERROR)
                         span?.recordException(e)
-                        span?.setAttribute("shipping.calculation.failed", true)
-                        span?.setAttribute(
-                            "shipping.calculation.error.type",
-                            e.javaClass.simpleName
-                        )
-                        span?.setAttribute(
-                            "shipping.calculation.error.message",
-                            e.message ?: "Unknown error"
-                        )
+                        span?.setAttribute("app.operation.status", "failed")
                         shippingCalculationError = "Failed to calculate shipping: ${e.message}"
                     } finally {
                         isCalculatingShipping = false

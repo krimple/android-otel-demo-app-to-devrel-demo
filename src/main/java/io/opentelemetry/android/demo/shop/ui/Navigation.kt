@@ -75,35 +75,40 @@ class InstrumentedAstronomyShopNavController(
     }
 
     fun navigateToProductDetail(productId: String) {
+        val tracer = OtelDemoApplication.getTracer()
+        val span = tracer?.spanBuilder("navigation")
+            ?.setAttribute("app.screen.name", "product_detail")
+            ?.setAttribute("app.operation.type", "navigate")
+            ?.setAttribute("app.product.id", productId)
+            ?.setAttribute("app.interaction.type", "tap")
+            ?.startSpan()
+        
         delegate.navigateToProductDetail(productId)
-        generateNavigationEvent(
-            eventName = "navigate.to.product.details",
-            payload = mapOf("product.id" to productId)
-        )
+        span?.end()
     }
 
     fun navigateToCheckoutInfo() {
+        val tracer = OtelDemoApplication.getTracer()
+        val span = tracer?.spanBuilder("navigation")
+            ?.setAttribute("app.screen.name", "checkout_info")
+            ?.setAttribute("app.operation.type", "navigate")
+            ?.setAttribute("app.interaction.type", "tap")
+            ?.startSpan()
+        
         delegate.navigateToCheckoutInfo()
-        generateNavigationEvent(
-            eventName = "navigate.to.checkout.info",
-            payload = emptyMap()
-        )
+        span?.end()
     }
 
     fun navigateToCheckoutConfirmation() {
+        val tracer = OtelDemoApplication.getTracer()
+        val span = tracer?.spanBuilder("navigation")
+            ?.setAttribute("app.screen.name", "checkout_confirmation")
+            ?.setAttribute("app.operation.type", "navigate")
+            ?.setAttribute("app.interaction.type", "tap")
+            ?.startSpan()
+        
         delegate.navigateToCheckoutConfirmation()
-        generateNavigationEvent(
-            eventName = "navigate.to.checkout.confirmation",
-            payload = emptyMap()
-        )
-    }
-
-    private fun generateNavigationEvent(eventName: String, payload: Map<String, String>) {
-        val eventBuilder = OtelDemoApplication.eventBuilder("otel.demo.app.navigation", eventName)
-        payload.forEach { (key, value) ->
-            eventBuilder?.setAttribute(stringKey(key), value)
-        }
-        eventBuilder?.emit()
+        span?.end()
     }
 }
 

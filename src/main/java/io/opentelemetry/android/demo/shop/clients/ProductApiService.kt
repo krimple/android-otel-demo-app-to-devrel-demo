@@ -15,10 +15,10 @@ class ProductApiService(
         val tracer = OtelDemoApplication.getTracer()
         Log.d("otel.demo", "Tracer obtained: $tracer")
 
-        val span = tracer?.spanBuilder("fetchProducts")
+        val span = tracer?.spanBuilder("ProductAPIService.fetchProducts")
+            ?.setAttribute("app.user.currency", currencyCode)
+            ?.setAttribute("app.operation.type", "fetch_products")
             ?.startSpan()
-
-        span?.setAttribute("currency.code", currencyCode)
         Log.d("otel.demo", "Span created: $span")
         return try {
             span?.makeCurrent().use {
@@ -50,10 +50,11 @@ class ProductApiService(
         val tracer = OtelDemoApplication.getTracer()
         Log.d("otel.demo", "Fetching individual product: $productId")
 
-        val span = tracer?.spanBuilder("fetchProduct")
+        val span = tracer?.spanBuilder("ProductAPIService.fetchProduct")
+            ?.setAttribute("app.product.id", productId)
+            ?.setAttribute("app.user.currency", currencyCode)
+            ?.setAttribute("app.operation.type", "fetch_product")
             ?.startSpan()
-        span?.setAttribute("product.id", productId)
-        span?.setAttribute("currency.code", currencyCode)
 
         return try {
             span?.makeCurrent().use {

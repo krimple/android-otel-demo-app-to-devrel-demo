@@ -28,11 +28,12 @@ class ProductDetailViewModel(
     
     fun loadProduct(productId: String, currencyCode: String = "USD") {
         val tracer = OtelDemoApplication.getTracer()
-        val span = tracer?.spanBuilder("loadProductDetail")
-            ?.setAttribute(stringKey("component"), "product_detail")
-            ?.setAttribute(stringKey("product.id"), productId)
-            ?.setAttribute(stringKey("currency.code"), currencyCode)
-            ?.setAttribute(stringKey("user_action"), "view_product_detail")
+        val span = tracer?.spanBuilder("ProductDetailViewModel.loadProduct")
+            ?.setAttribute("app.screen.name", "product_detail")
+            ?.setAttribute("app.product.id", productId)
+            ?.setAttribute("app.user.currency", currencyCode)
+            ?.setAttribute("app.operation.type", "view_product_detail")
+            ?.setAttribute("app.view.model", "ProductDetailViewModel")
             ?.startSpan()
         
         viewModelScope.launch {
@@ -46,12 +47,13 @@ class ProductDetailViewModel(
                         isLoading = false,
                         errorMessage = null
                     )
-                    span?.setAttribute(stringKey("product.name"), product.name)
-                    span?.setAttribute("product.price", product.priceValue())
-                    span?.setAttribute(stringKey("operation.result"), "success")
+                    span?.setAttribute("app.product.name", product.name)
+                    span?.setAttribute("app.product.price.usd", product.priceValue())
+                    span?.setAttribute("app.operation.status", "success")
                 }
             } catch (e: Exception) {
                 span?.setStatus(StatusCode.ERROR)
+                span?.setAttribute("app.operation.status", "failed")
                 span?.recordException(e)
                 _uiState.value = ProductDetailUiState(
                     product = null,
