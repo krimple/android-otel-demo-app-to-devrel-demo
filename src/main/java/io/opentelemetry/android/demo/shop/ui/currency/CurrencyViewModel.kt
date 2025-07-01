@@ -79,7 +79,6 @@ class CurrencyViewModel() : ViewModel() {
                     currentSpan.setAttribute("app.view.model", "CurrencyViewModel")
                     currentSpan.setAttribute("app.operation.type", "load_available_currencies")
                     currentSpan.setAttribute("app.currencies.count", currencies.size.toLong())
-                    currentSpan.setAttribute("app.operation.status", "success")
                 }
 
                 Log.d("otel.demo", "Currencies loaded successfully: ${currencies.size} currencies")
@@ -91,7 +90,6 @@ class CurrencyViewModel() : ViewModel() {
                 if (currentSpan.isRecording) {
                     currentSpan.setAttribute("app.view.model", "CurrencyViewModel")
                     currentSpan.setAttribute("app.operation.type", "load_available_currencies")
-                    currentSpan.setAttribute("app.operation.status", "failed")
                 }
 
                 _isLoading.value = false
@@ -111,7 +109,6 @@ class CurrencyViewModel() : ViewModel() {
                 currentSpan.setAttribute("app.view.model", "CurrencyViewModel")
                 currentSpan.setAttribute("app.operation.type", "select_currency")
                 currentSpan.setAttribute("app.user.currency", currency)
-                currentSpan.setAttribute("app.operation.status", "success")
             }
 
             Log.d("otel.demo", "Selected currency: $currency")
@@ -122,7 +119,6 @@ class CurrencyViewModel() : ViewModel() {
                 currentSpan.setAttribute("app.view.model", "CurrencyViewModel")
                 currentSpan.setAttribute("app.operation.type", "select_currency")
                 currentSpan.setAttribute("app.user.currency", currency)
-                currentSpan.setAttribute("app.operation.status", "failed")
             }
 
             Log.w("otel.demo", "Currency $currency not available in loaded currencies")

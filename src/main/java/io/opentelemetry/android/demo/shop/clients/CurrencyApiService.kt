@@ -32,7 +32,6 @@ class CurrencyApiService {
             if (currentSpan.isRecording) {
                 currentSpan.setAttribute("app.operation.type", "fetch_currencies")
                 currentSpan.setAttribute("app.currencies.count", currencies.size.toLong())
-                currentSpan.setAttribute("app.operation.status", "success")
                 currentSpan.updateName("CurrencyAPIService.fetchCurrencies") // Change from "executeRequest" to business name
             }
             return currencies
@@ -40,7 +39,6 @@ class CurrencyApiService {
             val currentSpan = Span.current()
             if (currentSpan.isRecording) {
                 currentSpan.setAttribute("app.operation.type", "fetch_currencies")
-                currentSpan.setAttribute("app.operation.status", "failed")
                 currentSpan.updateName("CurrencyAPIService.fetchCurrencies")
                 // Note: FetchHelpers already set ERROR status and recorded the HTTP exception
             }

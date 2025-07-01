@@ -49,11 +49,9 @@ class ProductDetailViewModel(
                     )
                     span?.setAttribute("app.product.name", product.name)
                     span?.setAttribute("app.product.price.usd", product.priceValue())
-                    span?.setAttribute("app.operation.status", "success")
                 }
             } catch (e: Exception) {
                 span?.setStatus(StatusCode.ERROR)
-                span?.setAttribute("app.operation.status", "failed")
                 span?.recordException(e)
                 _uiState.value = ProductDetailUiState(
                     product = null,

@@ -29,8 +29,11 @@ fun CartScreen(
     val productCatalogClient = ProductCatalogClient()
     val productApiService = ProductApiService()
     val recommendationService = remember { RecommendationService(productCatalogClient, productApiService, cartViewModel) }
-    val cartItems by cartViewModel.cartItems.collectAsState()
+    val uiState by cartViewModel.uiState.collectAsState()
+    val cartItems = uiState.cartItems
     val isCartEmpty = cartItems.isEmpty()
+    val isLoading = uiState.isLoading
+    val errorMessage = uiState.errorMessage
     val recommendedProducts = remember { recommendationService.getRecommendedProducts() }
 
 
@@ -39,6 +42,36 @@ fun CartScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
+        // Error message
+        errorMessage?.let { error ->
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Red.copy(alpha = 0.1f))
+                ) {
+                    Text(
+                        text = "Error: $error",
+                        color = Color.Red,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+            }
+        }
+
+        // Loading indicator
+        if (isLoading) {
+            item {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+        }
+
         item {
             Box(
                 modifier = Modifier.fillMaxWidth(),
@@ -46,6 +79,7 @@ fun CartScreen(
             ) {
                 OutlinedButton(
                     onClick = { clearCart(cartViewModel) },
+                    enabled = !isLoading,
                     modifier = Modifier
                 ) {
                     Text("Empty Cart", color = Color.Red)
@@ -78,9 +112,9 @@ fun CartScreen(
 
             Button(
                 onClick = onCheckoutClick,
-                enabled = !isCartEmpty,
+                enabled = !isCartEmpty && !isLoading,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isCartEmpty) Color.Gray else MaterialTheme.colorScheme.primary
+                    containerColor = if (isCartEmpty || isLoading) Color.Gray else MaterialTheme.colorScheme.primary
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -99,12 +133,12 @@ private fun clearCart(cartViewModel: CartViewModel) {
     val tracer = OtelDemoApplication.getTracer()
     val span = tracer?.spanBuilder("cart.clear")
         ?.setAttribute("app.cart.total.cost", cartViewModel.getTotalPrice())
-        ?.setAttribute("app.cart.items.count", cartViewModel.cartItems.value.size.toLong())
+        ?.setAttribute("app.cart.items.count", cartViewModel.uiState.value.cartItems.size.toLong())
         ?.setAttribute("app.operation.type", "clear_cart")
         ?.setAttribute("app.screen.name", "cart")
         ?.setAttribute("app.interaction.type", "tap")
         ?.startSpan()
     
-    cartViewModel.clearCart()
+    cartViewModel.clearCart() // Uses default USD currency
     span?.end()
 }

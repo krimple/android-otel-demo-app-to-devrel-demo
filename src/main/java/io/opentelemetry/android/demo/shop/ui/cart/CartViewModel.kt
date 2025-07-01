@@ -1,14 +1,23 @@
 package io.opentelemetry.android.demo.shop.ui.cart
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.android.demo.shop.model.Money
+import io.opentelemetry.android.demo.shop.model.ServerCart
+import io.opentelemetry.android.demo.shop.clients.CartApiService
+import io.opentelemetry.android.demo.shop.clients.ProductApiService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.api.common.AttributeKey.doubleKey
 import io.opentelemetry.api.common.AttributeKey.longKey
 import io.opentelemetry.api.common.AttributeKey.stringKey
+import io.opentelemetry.api.trace.StatusCode
 
 data class CartItem(
     val product: Product,
@@ -17,11 +26,70 @@ data class CartItem(
     fun totalPrice() = product.priceValue() * quantity
 }
 
-class CartViewModel : ViewModel() {
-    private val _cartItems = MutableStateFlow<List<CartItem>>(emptyList())
-    val cartItems: StateFlow<List<CartItem>> = _cartItems
+data class CartUiState(
+    val cartItems: List<CartItem> = emptyList(),
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null
+)
 
-    fun addProduct(product: Product, quantity: Int) {
+class CartViewModel(
+    private val cartApiService: CartApiService = CartApiService(),
+    private val productApiService: ProductApiService = ProductApiService()
+) : ViewModel() {
+    private val _uiState = MutableStateFlow(CartUiState())
+    val uiState: StateFlow<CartUiState> = _uiState
+    
+    val cartItems: StateFlow<List<CartItem>> = _uiState.map { it.cartItems }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(),
+        initialValue = emptyList()
+    )
+    
+    fun refreshCart(currencyCode: String = "USD") {
+        loadCart(currencyCode)
+    }
+    
+    private fun loadCart(currencyCode: String = "USD") {
+        val tracer = OtelDemoApplication.getTracer()
+        val span = tracer?.spanBuilder("CartViewModel.loadCart")
+            ?.setAttribute("app.operation.type", "load_cart")
+            ?.setAttribute("app.view.model", "CartViewModel")
+            ?.setAttribute("app.user.currency", currencyCode)
+            ?.startSpan()
+        
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            
+            try {
+                val serverCart = cartApiService.getCart()
+                val products = productApiService.fetchProducts(currencyCode)
+                val cartItems = serverCart.toCartItems(products)
+                
+                _uiState.value = CartUiState(
+                    cartItems = cartItems,
+                    isLoading = false,
+                    errorMessage = null
+                )
+                
+                span?.setAttribute("app.cart.items.count", cartItems.size.toLong())
+                span?.setAttribute("app.cart.total.cost", getTotalPrice())
+                
+            } catch (e: Exception) {
+                _uiState.value = CartUiState(
+                    cartItems = emptyList(),
+                    isLoading = false,
+                    errorMessage = e.message ?: "Failed to load cart"
+                )
+                
+                span?.setStatus(StatusCode.ERROR)
+                span?.recordException(e)
+            } finally {
+                span?.end()
+            }
+        }
+    }
+
+    fun addProduct(product: Product, quantity: Int, currencyCode: String = "USD") {
         val tracer = OtelDemoApplication.getTracer()
         val span = tracer?.spanBuilder("CartViewModel.addProduct")
             ?.setAttribute("app.product.id", product.id)
@@ -30,52 +98,75 @@ class CartViewModel : ViewModel() {
             ?.setAttribute("app.cart.item.quantity", quantity.toLong())
             ?.setAttribute("app.operation.type", "add_product")
             ?.setAttribute("app.view.model", "CartViewModel")
+            ?.setAttribute("app.user.currency", currencyCode)
             ?.startSpan()
         
-        try {
-            _cartItems.value = _cartItems.value.toMutableList().apply {
-                val index = indexOfFirst { it.product.id == product.id }
-                if (index >= 0) {
-                    val oldQuantity = this[index].quantity
-                    this[index] = this[index].copy(quantity = oldQuantity + quantity)
-                    span?.setAttribute("app.cart.previous.item.count", oldQuantity.toLong())
-                    span?.setAttribute("app.cart.new.item.count", (oldQuantity + quantity).toLong())
-                } else {
-                    add(CartItem(product, quantity))
-                    span?.setAttribute("app.cart.previous.item.count", 0L)
-                    span?.setAttribute("app.cart.new.item.count", quantity.toLong())
+        viewModelScope.launch {
+            // Prevent concurrent executions of addProduct
+            if (_uiState.value.isLoading) {
+                span?.setAttribute("app.operation.status", "skipped_already_loading")
+                span?.end()
+                return@launch
+            }
+            
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            
+            try {
+                // Check for demo scenarios
+                val currentCartItems = _uiState.value.cartItems
+                val currentExplorascopes = currentCartItems
+                    .filter { it.product.name.contains("National Park Foundation Explorascope") }
+                    .sumOf { it.quantity }
+                val totalExplorascopes = currentExplorascopes + quantity
+                
+                if (totalExplorascopes == 10) {
+                    span?.setAttribute("app.demo.trigger", "crash")
+                } else if (totalExplorascopes == 9) {
+                    span?.setAttribute("app.demo.trigger", "hang")
                 }
+                
+                if (product.name.contains("The Comet Book")) {
+                    span?.setAttribute("app.demo.trigger", "slow_animation")
+                }
+                
+                // Add to server-side cart
+                cartApiService.addItem(product.id, quantity)
+                
+                // Get updated cart state
+                val serverCart = cartApiService.getCart()
+                val products = productApiService.fetchProducts(currencyCode)
+                val cartItems = serverCart.toCartItems(products)
+                
+                _uiState.value = CartUiState(
+                    cartItems = cartItems,
+                    isLoading = false,
+                    errorMessage = null
+                )
+                
+                // Add debug telemetry
+                span?.setAttribute("app.cart.final.items.count", cartItems.size.toLong())
+                span?.setAttribute("app.cart.final.total.cost", getTotalPrice())
+                cartItems.forEachIndexed { index, item ->
+                    span?.setAttribute("app.cart.final.item_${index}.product_id", item.product.id)
+                    span?.setAttribute("app.cart.final.item_${index}.quantity", item.quantity.toLong())
+                }
+                
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = e.message ?: "Failed to add product to cart"
+                )
+                
+                span?.setStatus(StatusCode.ERROR)
+                span?.recordException(e)
+            } finally {
+                span?.end()
             }
-            
-            // Check for demo scenarios
-            val totalExplorascopes = _cartItems.value
-                .filter { it.product.name.contains("National Park Foundation Explorascope") }
-                .sumOf { it.quantity }
-            
-            if (totalExplorascopes == 10) {
-                span?.setAttribute("app.demo.trigger", "crash")
-            } else if (totalExplorascopes == 9) {
-                span?.setAttribute("app.demo.trigger", "hang")
-            }
-            
-            if (product.name.contains("The Comet Book")) {
-                span?.setAttribute("app.demo.trigger", "slow_animation")
-            }
-            
-            span?.setAttribute("app.cart.total.cost", getTotalPrice())
-            span?.setAttribute("app.cart.items.count", _cartItems.value.size.toLong())
-            span?.setAttribute("app.operation.status", "success")
-        } catch (e: Exception) {
-            span?.setAttribute("app.operation.status", "failed")
-            span?.recordException(e)
-            throw e
-        } finally {
-            span?.end()
         }
     }
 
     fun getTotalPrice(): Double {
-        return _cartItems.value.sumOf { it.totalPrice() }
+        return _uiState.value.cartItems.sumOf { it.totalPrice() }
     }
 
     fun getTotalPriceFormatted(currencyCode: String): String {
@@ -88,24 +179,39 @@ class CartViewModel : ViewModel() {
         return totalMoney.formatCurrency()
     }
 
-    fun clearCart() {
+    fun clearCart(currencyCode: String = "USD") {
         val tracer = OtelDemoApplication.getTracer()
         val span = tracer?.spanBuilder("CartViewModel.clearCart")
             ?.setAttribute("app.cart.total.cost", getTotalPrice())
-            ?.setAttribute("app.cart.items.count", _cartItems.value.size.toLong())
+            ?.setAttribute("app.cart.items.count", _uiState.value.cartItems.size.toLong())
             ?.setAttribute("app.operation.type", "clear_cart")
             ?.setAttribute("app.view.model", "CartViewModel")
+            ?.setAttribute("app.user.currency", currencyCode)
             ?.startSpan()
         
-        try {
-            _cartItems.value = emptyList()
-            span?.setAttribute("app.operation.status", "success")
-        } catch (e: Exception) {
-            span?.setAttribute("app.operation.status", "failed")
-            span?.recordException(e)
-            throw e
-        } finally {
-            span?.end()
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            
+            try {
+                cartApiService.emptyCart()
+                
+                _uiState.value = CartUiState(
+                    cartItems = emptyList(),
+                    isLoading = false,
+                    errorMessage = null
+                )
+                
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    errorMessage = e.message ?: "Failed to clear cart"
+                )
+                
+                span?.setStatus(StatusCode.ERROR)
+                span?.recordException(e)
+            } finally {
+                span?.end()
+            }
         }
     }
 

@@ -80,14 +80,12 @@ class ShippingApiService {
                 Log.d("otel.demo", "Shipping preview completed - cost: ${checkoutResponse.shippingCost.formatCurrency()}")
                 
                 span?.setAttribute("app.shipping.cost", checkoutResponse.shippingCost.toDouble())
-                span?.setAttribute("app.operation.status", "success")
                 
                 checkoutResponse.shippingCost
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
             span?.recordException(e)
-            span?.setAttribute("app.operation.status", "failed")
             Log.d("otel.demo", "Shipping preview request failed, returning zero cost fallback")
             // Return zero cost as fallback
             Money(currencyCode = currencyCode, units = 0, nanos = 0)
