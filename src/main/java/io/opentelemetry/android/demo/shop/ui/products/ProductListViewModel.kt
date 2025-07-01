@@ -62,7 +62,6 @@ class ProductListViewModel(
                 )
 
                 span?.setAttribute("app.products.count", products.size.toLong())
-                span?.setAttribute("app.operation.status", "success")
                 
             } catch (e: Exception) {
                 _uiState.value = ProductListUiState(
@@ -71,7 +70,7 @@ class ProductListViewModel(
                     errorMessage = e.message ?: "Failed to load products"
                 )
                 
-                span?.setAttribute("app.operation.status", "failed")
+                span?.setStatus(StatusCode.ERROR)
                 span?.recordException(e)
             } finally {
                 span?.end()

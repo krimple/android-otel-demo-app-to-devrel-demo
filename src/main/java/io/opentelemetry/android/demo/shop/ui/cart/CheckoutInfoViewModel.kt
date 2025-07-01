@@ -127,13 +127,11 @@ class CheckoutInfoViewModel : ViewModel() {
                             currencyCode = currencyCode
                         )
                         shippingCost = cost
-                        span?.setAttribute("app.operation.status", "success")
                         span?.setAttribute("app.shipping.cost", cost.toDouble())
                         hasCalculatedShipping = true
                     } catch (e: Exception) {
                         span?.setStatus(StatusCode.ERROR)
                         span?.recordException(e)
-                        span?.setAttribute("app.operation.status", "failed")
                         shippingCalculationError = "Failed to calculate shipping: ${e.message}"
                     } finally {
                         isCalculatingShipping = false

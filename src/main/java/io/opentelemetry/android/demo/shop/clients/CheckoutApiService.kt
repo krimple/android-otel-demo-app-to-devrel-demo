@@ -6,6 +6,7 @@ import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.model.*
 import io.opentelemetry.android.demo.shop.ui.cart.CartViewModel
 import io.opentelemetry.android.demo.shop.ui.cart.CheckoutInfoViewModel
+import io.opentelemetry.android.demo.shop.session.SessionManager
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -21,6 +22,8 @@ class CheckoutApiService(
     companion object {
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
     }
+    
+    private val sessionManager = SessionManager.getInstance()
 
     suspend fun placeOrder(
         cartViewModel: CartViewModel,
@@ -35,13 +38,14 @@ class CheckoutApiService(
         Log.d("CheckoutApiService", "SPAN CREATED: checkout.place_order span=$span, tracer=$tracer")
 
         span?.setAttribute(stringKey("currency.code"), currencyCode)
+        span?.setAttribute("app.temp.session.id", sessionManager.currentSessionId)
 
         // TODO - if no span, then what?
         Log.d("CheckoutApiService", "SPAN MAKING CURRENT: checkout.place_order span=$span")
         return span?.makeCurrent().use {
             Log.d("CheckoutApiService", "SPAN IS NOW CURRENT: checkout.place_order span=$span")
             try {
-                val checkoutRequest = buildCheckoutRequest(cartViewModel, checkoutInfoViewModel, currencyCode)
+                val checkoutRequest = buildCheckoutRequest(checkoutInfoViewModel, currencyCode)
 
                 // Add checkout request attributes
                 span?.setAttribute(stringKey("checkout.user_id"), checkoutRequest.userId)
@@ -55,28 +59,21 @@ class CheckoutApiService(
                 span?.setAttribute(longKey("checkout.credit_card.expiry_month"), checkoutRequest.creditCard.creditCardExpirationMonth.toLong())
                 span?.setAttribute(longKey("checkout.credit_card.expiry_year"), checkoutRequest.creditCard.creditCardExpirationYear.toLong())
 
-                // Add cart information
-                val cartItems = cartViewModel.cartItems.value
-                span?.setAttribute(longKey("checkout.cart.items_count"), cartItems.size.toLong())
-                span?.setAttribute(doubleKey("checkout.cart.total_price"), cartViewModel.getTotalPrice())
-
-                cartItems.forEachIndexed { index, item ->
-                    span?.setAttribute(stringKey("checkout.cart.item_${index}.product_id"), item.product.id)
-                    span?.setAttribute(stringKey("checkout.cart.item_${index}.product_name"), item.product.name)
-                    span?.setAttribute(longKey("checkout.cart.item_${index}.quantity"), item.quantity.toLong())
-                    span?.setAttribute(doubleKey("checkout.cart.item_${index}.unit_price"), item.product.priceValue())
-                    span?.setAttribute(doubleKey("checkout.cart.item_${index}.total_price"), item.totalPrice())
-                }
+                // Note: Cart items now come from server-side cart via sessionId
+                span?.setAttribute("checkout.cart.source", "server_side")
+                span?.setAttribute("app.temp.session.id", sessionManager.currentSessionId)
 
                 val requestBody = Gson().toJson(checkoutRequest)
-                val checkoutUrl = "${OtelDemoApplication.apiEndpoint}/checkout?currencyCode=$currencyCode"
+                val checkoutUrl = "${OtelDemoApplication.apiEndpoint}/checkout?currencyCode=$currencyCode&sessionId=${sessionManager.currentSessionId}"
                 val request = Request.Builder()
                     .url(checkoutUrl)
                     .post(requestBody.toRequestBody(JSON_MEDIA_TYPE))
                     .build()
 
-                Log.d("CheckoutApiService", "BEFORE HTTP REQUEST: checkout.place_order span=$span, about to call FetchHelpers.executeRequest")
-                val responseBody = FetchHelpers.executeRequest(request)
+                val baggageHeaders = mapOf("Baggage" to "session.id=${sessionManager.currentSessionId}")
+
+                Log.d("CheckoutApiService", "BEFORE HTTP REQUEST: checkout.place_order span=$span, about to call FetchHelpers.executeRequestWithBaggage")
+                val responseBody = FetchHelpers.executeRequestWithBaggage(request, baggageHeaders)
                 Log.d("CheckoutApiService", "AFTER HTTP REQUEST: checkout.place_order span=$span, FetchHelpers.executeRequest completed")
                 val checkoutResponse = Gson().fromJson(responseBody, CheckoutResponse::class.java)
 
@@ -101,6 +98,11 @@ class CheckoutApiService(
                     doubleKey("checkout.response.total_order_cost"),
                     totalCost + checkoutResponse.shippingCost.toDouble())
 
+                // Reset session after successful checkout
+                sessionManager.resetSession()
+                span?.setAttribute("checkout.session.reset", true)
+                span?.setAttribute("app.temp.session.id", sessionManager.currentSessionId)
+
                 // return this response
                 checkoutResponse
             } catch (e: Exception) {
@@ -118,16 +120,14 @@ class CheckoutApiService(
     }
 
     private fun buildCheckoutRequest(
-        cartViewModel: CartViewModel,
         checkoutInfoViewModel: CheckoutInfoViewModel,
         currencyCode: String = "USD"
     ): CheckoutRequest {
         val shippingInfo = checkoutInfoViewModel.shippingInfo
         val paymentInfo = checkoutInfoViewModel.paymentInfo
-        val cartItems = cartViewModel.cartItems.value
 
         return CheckoutRequest(
-            userId = UUID.randomUUID().toString(),
+            userId = sessionManager.currentSessionId,
             email = shippingInfo.email,
             address = CheckoutAddress(
                 streetAddress = shippingInfo.streetAddress,
@@ -142,13 +142,8 @@ class CheckoutApiService(
                 creditCardExpirationMonth = paymentInfo.expiryMonth.toIntOrNull() ?: 1,
                 creditCardExpirationYear = paymentInfo.expiryYear.toIntOrNull() ?: 2030,
                 creditCardNumber = paymentInfo.creditCardNumber
-            ),
-            items = cartItems.map { cartItem ->
-                CheckoutRequestItem(
-                    productId = cartItem.product.id,
-                    quantity = cartItem.quantity
-                )
-            }
+            )
+            // Note: items removed - server will get them from cart using sessionId
         )
     }
 }

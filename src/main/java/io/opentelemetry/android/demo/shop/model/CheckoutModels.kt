@@ -8,7 +8,7 @@ data class CheckoutRequest(
     val address: CheckoutAddress,
     val userCurrency: String,
     val creditCard: CheckoutCreditCard,
-    val items: List<CheckoutRequestItem>
+    val items: List<CheckoutRequestItem>? = null  // Optional for server-side cart
 )
 
 data class CheckoutAddress(

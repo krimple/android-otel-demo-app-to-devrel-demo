@@ -184,6 +184,7 @@ fun ProductDetails(
                         cartViewModel = cartViewModel,
                         product = product,
                         quantity = quantity,
+                        currencyCode = selectedCurrency,
                         onSlowRenderChange = { slowRender = it }
                     )
                     Spacer(modifier = Modifier.height(32.dp))
@@ -229,6 +230,7 @@ fun AddToCartButton(
     cartViewModel: CartViewModel,
     product: Product,
     quantity: Int,
+    currencyCode: String,
     onSlowRenderChange: (Boolean) -> Unit
 ) {
     var showCrashPopup by remember { mutableStateOf(false) }
@@ -244,7 +246,7 @@ fun AddToCartButton(
                     onSlowRenderChange(true)
                 }
             }
-            cartViewModel.addProduct(product, quantity)
+            cartViewModel.addProduct(product, quantity, currencyCode)
         },
         modifier = Modifier
             .fillMaxWidth()
