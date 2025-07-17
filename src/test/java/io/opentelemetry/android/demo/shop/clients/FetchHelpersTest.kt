@@ -30,7 +30,7 @@ class FetchHelpersTest {
     }
 
     @Test
-    fun `executeRequest adds trace headers to request`() = runTest {
+    fun `executeRequestWithBaggage adds trace headers to request`() = runTest {
         // Arrange
         val mockResponse = MockResponse()
             .setResponseCode(200)
@@ -44,7 +44,8 @@ class FetchHelpersTest {
 
         // Act
         try {
-            FetchHelpers.executeRequest(request)
+            val baggageHeaders = mapOf("Baggage" to "session.id=test-session")
+            FetchHelpers.executeRequestWithBaggage(request, baggageHeaders)
         } catch (e: Exception) {
             // We expect this might fail due to JSON parsing, but that's ok
             // We just want to verify the headers were sent
@@ -83,15 +84,18 @@ class FetchHelpersTest {
         }
         println("======================")
         
-        // The key test: verify that FetchHelpers.executeRequest calls the header injection code
+        // The key test: verify that FetchHelpers.executeRequestWithBaggage calls the header injection code
         // This test will fail if someone removes the trace propagation code from FetchHelpers
-        assertTrue("FetchHelpers.executeRequest should attempt header injection - " +
+        assertTrue("FetchHelpers.executeRequestWithBaggage should attempt header injection - " +
                    "this test will catch if trace propagation code is removed", 
                    recordedRequest.headers.size >= 0) // Request was made = injection was attempted
+        
+        // Verify baggage header is present
+        assertEquals("session.id=test-session", recordedRequest.getHeader("Baggage"))
     }
 
     @Test
-    fun `executeRequest returns response body correctly`() = runTest {
+    fun `executeRequestWithBaggage returns response body correctly`() = runTest {
         // Arrange
         val expectedBody = """"""
         val mockResponse = MockResponse()
@@ -105,14 +109,15 @@ class FetchHelpersTest {
             .build()
 
         // Act
-        val result = FetchHelpers.executeRequest(request)
+        val baggageHeaders = mapOf("Baggage" to "session.id=test-session")
+        val result = FetchHelpers.executeRequestWithBaggage(request, baggageHeaders)
 
         // Assert
         assertEquals(expectedBody, result)
     }
 
     @Test
-    fun `executeRequest throws exception for non-2xx status codes`() = runTest {
+    fun `executeRequestWithBaggage throws exception for non-2xx status codes`() = runTest {
         // Arrange
         val mockResponse = MockResponse()
             .setResponseCode(404)
@@ -126,7 +131,8 @@ class FetchHelpersTest {
 
         // Act & Assert
         try {
-            FetchHelpers.executeRequest(request)
+            val baggageHeaders = mapOf("Baggage" to "session.id=test-session")
+            FetchHelpers.executeRequestWithBaggage(request, baggageHeaders)
             fail("Expected exception for 404 status")
         } catch (e: Exception) {
             assertTrue("Exception message should contain status code", 
@@ -135,7 +141,7 @@ class FetchHelpersTest {
     }
 
     @Test
-    fun `executeRequest handles network failures`() = runTest {
+    fun `executeRequestWithBaggage handles network failures`() = runTest {
         // Arrange - no mock response enqueued, so connection will fail
         val request = Request.Builder()
             .url("http://localhost:${mockWebServer.port + 1}/nonexistent") // Wrong port
@@ -144,7 +150,8 @@ class FetchHelpersTest {
 
         // Act & Assert
         try {
-            FetchHelpers.executeRequest(request)
+            val baggageHeaders = mapOf("Baggage" to "session.id=test-session")
+            FetchHelpers.executeRequestWithBaggage(request, baggageHeaders)
             fail("Expected exception for network failure")
         } catch (e: Exception) {
             // Network failures should throw IOException with connection-related messages

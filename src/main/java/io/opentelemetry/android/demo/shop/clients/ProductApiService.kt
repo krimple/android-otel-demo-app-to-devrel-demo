@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.model.Product
+import io.opentelemetry.android.demo.shop.session.SessionManager
 import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.context.Context
 import okhttp3.Request
@@ -11,6 +12,7 @@ import android.util.Log
 
 class ProductApiService(
 ) {
+    private val sessionManager = SessionManager.getInstance()
     suspend fun fetchProducts(currencyCode: String = "USD"): List<Product> {
         val tracer = OtelDemoApplication.getTracer()
         Log.d("otel.demo", "Tracer obtained: $tracer")
@@ -28,7 +30,8 @@ class ProductApiService(
                     .url(productsUrl)
                     .get().build()
 
-                val bodyText = FetchHelpers.executeRequest(request)
+                val baggageHeaders = mapOf("Baggage" to "session.id=${sessionManager.currentSessionId}")
+                val bodyText = FetchHelpers.executeRequestWithBaggage(request, baggageHeaders)
                 val listType = object : TypeToken<List<Product>>() {}.type
                 Log.d("otel.demo", "Request completed successfully")
                 // implict return is last statement in method in Kotlin so it is for the try
@@ -64,7 +67,8 @@ class ProductApiService(
                     .url(productUrl)
                     .get().build()
 
-                val bodyText = FetchHelpers.executeRequest(request)
+                val baggageHeaders = mapOf("Baggage" to "session.id=${sessionManager.currentSessionId}")
+                val bodyText = FetchHelpers.executeRequestWithBaggage(request, baggageHeaders)
                 Log.d("otel.demo", "Individual product request completed successfully")
                 Gson().fromJson(bodyText, Product::class.java)
             }

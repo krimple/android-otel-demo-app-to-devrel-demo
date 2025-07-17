@@ -63,6 +63,7 @@ rum.access.token=your_honeycomb_api_key
   - `CurrencyApiService.kt` - Available currencies fetching
   - `ShippingApiService.kt` - Shipping cost calculation via checkout preview
   - `CheckoutApiService.kt` - Order placement with currency and shipping support
+  - `FetchHelpers.kt` - Unified HTTP client with session baggage propagation for complete user journey tracking
 
 ### Demo Test Scenarios
 - **Crash**: Add exactly 10 "National Park Foundation Explorascope" items
@@ -82,6 +83,28 @@ rum.access.token=your_honeycomb_api_key
 - OpenTelemetry Core (1.49.0)
 - OkHttp with auto-instrumentation
 - Coil (Image loading and caching)
+
+## HTTP Client Architecture
+
+### Session-Aware Request Handling
+All API services now use `FetchHelpers.executeRequestWithBaggage()` to ensure complete user journey tracking:
+
+- **Unified Session Context**: All HTTP requests include session baggage headers (`session.id=${sessionId}`)
+- **Complete User Journey**: Product browsing, currency changes, shipping calculations, and checkout all linked to the same session
+- **Enhanced Observability**: Full traceability from initial app launch through order completion
+- **Distributed Tracing**: Session context propagates across all service boundaries for end-to-end visibility
+
+### API Services Integration
+- **ProductApiService**: Product catalog requests now include session context for user journey correlation
+- **CurrencyApiService**: Currency selection events tied to user session for conversion analysis
+- **ShippingApiService**: Shipping calculations linked to shopping session for checkout flow insights
+- **CheckoutApiService & CartApiService**: Continue to use session context for order processing
+
+This architecture change enables rich analytics like:
+- Time-to-purchase analysis from first product view to checkout
+- Currency selection impact on user behavior
+- Shopping cart abandonment patterns
+- Cross-service performance correlation
 
 ## Telemetry Patterns
 
