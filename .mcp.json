@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+      "honeycomb-dogfood": {
+          "type": "http",
+          "url": "https://mcp-dogfood.honeycomb.io/mcp"
+      },
+      "honeycomb": {
+          "type": "http",
+          "url": "https://mcp.honeycomb.io/mcp"
+      }
+  }
+}

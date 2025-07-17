@@ -3,6 +3,7 @@ package io.opentelemetry.android.demo.shop.clients
 import com.google.gson.Gson
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.model.*
+import io.opentelemetry.android.demo.shop.session.SessionManager
 import io.opentelemetry.android.demo.shop.ui.cart.CartViewModel
 import io.opentelemetry.android.demo.shop.ui.cart.CheckoutInfoViewModel
 import io.opentelemetry.api.trace.StatusCode
@@ -13,6 +14,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import android.util.Log
 
 class ShippingApiService {
+    private val sessionManager = SessionManager.getInstance()
+    
     companion object {
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
     }
@@ -74,7 +77,8 @@ class ShippingApiService {
                     .post(requestBody.toRequestBody(JSON_MEDIA_TYPE))
                     .build()
 
-                val responseBody = FetchHelpers.executeRequest(request)
+                val baggageHeaders = mapOf("Baggage" to "session.id=${sessionManager.currentSessionId}")
+                val responseBody = FetchHelpers.executeRequestWithBaggage(request, baggageHeaders)
                 val checkoutResponse = Gson().fromJson(responseBody, CheckoutResponse::class.java)
                 
                 Log.d("otel.demo", "Shipping preview completed - cost: ${checkoutResponse.shippingCost.formatCurrency()}")

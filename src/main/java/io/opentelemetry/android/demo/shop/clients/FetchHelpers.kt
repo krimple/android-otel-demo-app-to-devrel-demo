@@ -16,55 +16,6 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 
 class FetchHelpers {
     companion object {
-        suspend fun executeRequest(request: Request): String = suspendCancellableCoroutine<String> { cont ->
-
-            val tracer = OtelDemoApplication.getTracer()
-            val span = tracer?.spanBuilder("executeRequest")?.setSpanKind(SpanKind.CLIENT)?.startSpan()
-            val client = OkHttpClient()
-
-            val tracedRequest = request.newBuilder().build()
-
-            val call = client.newCall(tracedRequest)
-
-            cont.invokeOnCancellation {
-                call.cancel()
-            }
-
-            span?.setAttribute("http.method", tracedRequest.method)
-            span?.setAttribute("http.url", tracedRequest.url.toString())
-
-            client.newCall(tracedRequest).enqueue(object : Callback {
-
-                override fun onFailure(call: Call, e: IOException) {
-                    Log.d(
-                        "FetchHelpers",
-                        "SPAN ERROR: executeRequest span=$span, HTTP error ${e.message}"
-                    )
-                    span?.setStatus(StatusCode.ERROR)
-                    span?.recordException(e)
-                    span?.end()
-                    cont.resumeWithException(e)
-                }
-
-                override fun onResponse(call: Call, response: Response): Unit {
-                    if (!response.isSuccessful) {
-                        Log.d(
-                            "FetchHelpers",
-                            "SPAN ERROR: executeRequest span=$span, HTTP error ${response.message}"
-                        )
-                        span?.setStatus(StatusCode.ERROR)
-                        val ex =
-                            IOException("error ${response.code}: ${response.body?.string()}")
-                        span?.recordException(ex)
-                        span?.end()
-                        cont.resumeWithException(ex)
-                    } else {
-                        span?.end()
-                        cont.resume(response.body?.string() ?: "")
-                    }
-                }
-            })
-        }
 
         suspend fun executeRequestWithBaggage(request: Request, baggageHeaders: Map<String, String>): String = suspendCancellableCoroutine<String> { cont ->
 
@@ -83,11 +34,12 @@ class FetchHelpers {
 
             cont.invokeOnCancellation {
                 call.cancel()
+                span?.end()
             }
 
-            span?.setAttribute("http.method", tracedRequest.method)
-            span?.setAttribute("http.url", tracedRequest.url.toString())
-            span?.setAttribute("baggage.headers.count", baggageHeaders.size.toLong())
+            // span?.setAttribute("http.method", tracedRequest.method)
+            // span?.setAttribute("http.url", tracedRequest.url.toString())
+            // span?.setAttribute("baggage.headers.count", baggageHeaders.size.toLong())
 
             client.newCall(tracedRequest).enqueue(object : Callback {
 
