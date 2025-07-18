@@ -21,7 +21,7 @@ class FetchHelpers {
 
             val tracer = OtelDemoApplication.getTracer()
             val span = tracer?.spanBuilder("executeRequestWithBaggage")?.setSpanKind(SpanKind.CLIENT)?.startSpan()
-            val client = OkHttpClient()
+            val client = OtelDemoApplication.getHttpClient()
 
             // Add baggage headers to the request
             val requestBuilder = request.newBuilder()
