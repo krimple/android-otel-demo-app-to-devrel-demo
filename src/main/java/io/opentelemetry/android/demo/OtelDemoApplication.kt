@@ -22,6 +22,7 @@ import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.api.logs.LogRecordBuilder
 import io.opentelemetry.api.metrics.LongCounter
 import io.opentelemetry.api.trace.Tracer
+import okhttp3.OkHttpClient
 
 const val TAG = "otel.demo"
 
@@ -64,6 +65,11 @@ class OtelDemoApplication : Application() {
             rum = Honeycomb.configure(this, options)
             Log.d(TAG, "RUM session started with service: $serviceName")
             // Initialize the singleton tracer here
+            
+            // Initialize OkHttpClient after telemetry is configured
+            httpClient = OkHttpClient.Builder()
+                .build()
+            Log.d(TAG, "OkHttpClient singleton initialized")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize Honeycomb!", e)
         }
@@ -76,6 +82,7 @@ class OtelDemoApplication : Application() {
         private lateinit var INSTANCE: OtelDemoApplication
         // Define a nullable Tracer variable for the singleton
         private var appTracer: Tracer? = null
+        private var httpClient: OkHttpClient? = null
         
         fun getInstance(): OtelDemoApplication = INSTANCE
 
@@ -91,6 +98,10 @@ class OtelDemoApplication : Application() {
 
         fun eventBuilder(scopeName: String, eventName: String): LogRecordBuilder? {
             return rum?.openTelemetry?.getLogsBridge()?.get(scopeName)?.logRecordBuilder()?.setBody(eventName)
+        }
+
+        fun getHttpClient(): OkHttpClient {
+            return httpClient ?: throw IllegalStateException("OkHttpClient not initialized")
         }
     }
 }

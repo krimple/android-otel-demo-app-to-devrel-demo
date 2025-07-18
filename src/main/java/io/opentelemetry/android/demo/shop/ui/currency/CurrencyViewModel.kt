@@ -33,7 +33,12 @@ class CurrencyViewModel() : ViewModel() {
 
     init {
         // Load currencies when ViewModel is created
-        loadCurrencies()
+        try {
+            loadCurrencies()
+        } catch (e: Exception) {
+            Log.d("otel.demo", "Failed to load currencies during initialization", e)
+            _error.value = "Failed to initialize: ${e.message}"
+        }
     }
 
     private fun getSavedCurrency(): String {
@@ -43,6 +48,7 @@ class CurrencyViewModel() : ViewModel() {
                 ?.getString("selected_currency", "USD") ?: "USD"
         } catch (e: Exception) {
             // Fallback for tests or when OtelDemoApplication is not initialized
+            Log.d("otel.demo", "OtelDemoApplication not initialized, using USD default", e)
             "USD"
         }
     }
