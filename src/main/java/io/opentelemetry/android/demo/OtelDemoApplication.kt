@@ -47,15 +47,18 @@ class OtelDemoApplication : Application() {
             ?: throw IllegalStateException("HONEYCOMB_API_KEY must be set in otel.properties")
         val serviceName = otelProperties.getProperty("SERVICE_NAME") 
             ?: throw IllegalStateException("SERVICE_NAME must be set in otel.properties")
-        val endpoint = otelProperties.getProperty("TELEMETRY_ENDPOINT") 
-            ?: throw IllegalStateException("TELEMETRY_ENDPOINT must be set in otel.properties")
+        val tracesEndpoint = otelProperties.getProperty("TRACES_ENDPOINT")
+            ?: throw IllegalStateException("TRACES_ENDPOINT must be set in otel.properties")
+        val logsEndpoint = otelProperties.getProperty("LOGS_ENDPOINT")
+            ?: throw IllegalStateException("LOGS_ENDPOINT must be set in otel.properties")
 
         apiEndpoint = otelProperties.getProperty("API_ENDPOINT")
             ?: throw IllegalStateException("API_ENDPOINT must be set in otel.properties")
         
         val options = HoneycombOptions.builder(this)
             .setApiKey(apiKey)
-            .setApiEndpoint(endpoint)
+            .setApiEndpoint(tracesEndpoint)
+            .setLogsApiEndpoint(logsEndpoint)
             .setServiceName(serviceName)
             .setServiceVersion("1.0")
             .setDebug(true)
@@ -63,7 +66,7 @@ class OtelDemoApplication : Application() {
 
         try {
             rum = Honeycomb.configure(this, options)
-            Log.d(TAG, "RUM session started with service: $serviceName")
+            Log.w(TAG, "RUM session started with service: $serviceName")
             // Initialize the singleton tracer here
             
             // Initialize OkHttpClient after telemetry is configured
@@ -80,12 +83,13 @@ class OtelDemoApplication : Application() {
 
         var rum: OpenTelemetryRum? = null
         private lateinit var INSTANCE: OtelDemoApplication
-        // Define a nullable Tracer variable for the singleton
-        private var appTracer: Tracer? = null
+
+        // for REST API endpoint requests
         private var httpClient: OkHttpClient? = null
         
         fun getInstance(): OtelDemoApplication = INSTANCE
 
+        // TODO - extract this!
         var apiEndpoint: String = "https://www.zurelia.honeydemo.io/api"
 
         fun getTracer(): Tracer? {
@@ -97,7 +101,7 @@ class OtelDemoApplication : Application() {
         }
 
         fun eventBuilder(scopeName: String, eventName: String): LogRecordBuilder? {
-            return rum?.openTelemetry?.getLogsBridge()?.get(scopeName)?.logRecordBuilder()?.setBody(eventName)
+            return rum?.openTelemetry?.logsBridge?.get(scopeName)?.logRecordBuilder()?.setBody(eventName)
         }
 
         fun getHttpClient(): OkHttpClient {

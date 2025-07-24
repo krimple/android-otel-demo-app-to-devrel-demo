@@ -52,7 +52,6 @@ class CartViewModel(
     private fun loadCart(currencyCode: String = "USD") {
         val tracer = OtelDemoApplication.getTracer()
         val span = tracer?.spanBuilder("CartViewModel.loadCart")
-            ?.setAttribute("app.operation.type", "load_cart")
             ?.setAttribute("app.view.model", "CartViewModel")
             ?.setAttribute("app.user.currency", currencyCode)
             ?.startSpan()
@@ -96,7 +95,6 @@ class CartViewModel(
             ?.setAttribute("app.product.name", product.name)
             ?.setAttribute("app.product.price.usd", product.priceValue())
             ?.setAttribute("app.cart.item.quantity", quantity.toLong())
-            ?.setAttribute("app.operation.type", "add_product")
             ?.setAttribute("app.view.model", "CartViewModel")
             ?.setAttribute("app.user.currency", currencyCode)
             ?.startSpan()

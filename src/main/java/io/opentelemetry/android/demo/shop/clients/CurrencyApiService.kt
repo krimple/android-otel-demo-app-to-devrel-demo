@@ -33,7 +33,6 @@ class CurrencyApiService {
             // post-call enrichment of OK HTTP span
             val currentSpan = Span.current()
             if (currentSpan.isRecording) {
-                currentSpan.setAttribute("app.operation.type", "fetch_currencies")
                 currentSpan.setAttribute("app.currencies.count", currencies.size.toLong())
                 currentSpan.updateName("CurrencyAPIService.fetchCurrencies") // Change from "executeRequest" to business name
             }

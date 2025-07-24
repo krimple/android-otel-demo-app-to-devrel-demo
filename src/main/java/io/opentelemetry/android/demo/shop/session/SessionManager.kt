@@ -1,7 +1,6 @@
 package io.opentelemetry.android.demo.shop.session
 
 import io.opentelemetry.android.demo.OtelDemoApplication
-import io.opentelemetry.api.common.AttributeKey.stringKey
 import io.opentelemetry.api.trace.StatusCode
 import java.util.UUID
 

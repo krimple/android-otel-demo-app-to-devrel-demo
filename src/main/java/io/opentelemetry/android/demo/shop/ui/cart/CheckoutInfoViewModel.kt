@@ -95,25 +95,29 @@ class CheckoutInfoViewModel : ViewModel() {
         viewModelScope.launch {
             if (!shippingInfo.isComplete() || cartViewModel.cartItems.value.isEmpty()) {
                 val span = tracer?.spanBuilder("skipCalculateShippingCost")
-                ?.setAttribute("app.shipping.calculation.skipped", true)
-                ?.setAttribute("app.shipping.calculation.skip.reason",
-                  if (!shippingInfo.isComplete()) "incomplete_shipping_info" else "empty_cart")
-                ?.setAttribute("app.user.currency", currencyCode)
-                ?.setAttribute("app.view.model", "CheckoutInfoViewModel")
-                ?.setAttribute("app.operation.type", "skip_shipping_calculation")
-                ?.startSpan()
+                    ?.setAttribute("app.shipping.calculation.skipped", true)
+                    ?.setAttribute(
+                        "app.shipping.calculation.skip.reason",
+                        if (!shippingInfo.isComplete()) "incomplete_shipping_info" else "empty_cart"
+                    )
+                    ?.setAttribute("app.user.currency", currencyCode)
+                    ?.setAttribute("app.view.model", "CheckoutInfoViewModel")
+                    ?.setAttribute("app.operation.type", "skip_shipping_calculation")
+                    ?.startSpan()
                 shippingCost = null
                 span?.end()
             } else {
                 val span = tracer?.spanBuilder("calculateShippingCost")
                     ?.setAttribute("app.user.currency", currencyCode)
                     ?.setAttribute("app.shipping.info.complete", shippingInfo.isComplete())
-                    ?.setAttribute("app.cart.items.count", cartViewModel.cartItems.value.size.toLong())
+                    ?.setAttribute(
+                        "app.cart.items.count",
+                        cartViewModel.cartItems.value.size.toLong()
+                    )
                     ?.setAttribute("app.shipping.address.city", shippingInfo.city)
                     ?.setAttribute("app.shipping.address.state", shippingInfo.state)
                     ?.setAttribute("app.shipping.address.country", shippingInfo.country)
                     ?.setAttribute("app.view.model", "CheckoutInfoViewModel")
-                    ?.setAttribute("app.operation.type", "calculate_shipping")
                     ?.startSpan()
                 span?.makeCurrent().use {
                     isCalculatingShipping = true
@@ -141,10 +145,4 @@ class CheckoutInfoViewModel : ViewModel() {
             }
         }
     }
-
-//    fun getTotalCost(cartViewModel: CartViewModel): Double {
-//        val cartTotal = cartViewModel.getTotalPrice()
-//        val shipping = shippingCost?.toDouble() ?: 0.0
-//        return cartTotal + shipping
-//    }
 }

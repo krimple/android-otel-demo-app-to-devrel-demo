@@ -134,7 +134,6 @@ private fun clearCart(cartViewModel: CartViewModel) {
     val span = tracer?.spanBuilder("cart.clear")
         ?.setAttribute("app.cart.total.cost", cartViewModel.getTotalPrice())
         ?.setAttribute("app.cart.items.count", cartViewModel.uiState.value.cartItems.size.toLong())
-        ?.setAttribute("app.operation.type", "clear_cart")
         ?.setAttribute("app.screen.name", "cart")
         ?.setAttribute("app.interaction.type", "tap")
         ?.startSpan()
