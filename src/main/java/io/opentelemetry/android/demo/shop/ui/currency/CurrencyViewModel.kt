@@ -72,28 +72,13 @@ class CurrencyViewModel() : ViewModel() {
             _error.value = null
 
             try {
+                // No outer span - just let the API call create its own single-span trace
                 val currencies = currencyApiService.fetchCurrencies()
                 _availableCurrencies.value = currencies
                 _isLoading.value = false
 
-                // Add attributes to the current span (created by fetchCurrencies)
-                val currentSpan = Span.current()
-                if (currentSpan.isRecording) {
-                    currentSpan.setAttribute("app.view.model", "CurrencyViewModel")
-                    currentSpan.setAttribute("app.currencies.count", currencies.size.toLong())
-                }
-
             } catch (e: Exception) {
                 Log.e("otel.demo", "Failed to load currencies: ${e.message}", e)
-
-                // Add error context to current span
-                val currentSpan = Span.current()
-                if (currentSpan.isRecording) {
-                    currentSpan.setAttribute("app.view.model", "CurrencyViewModel")
-                    currentSpan.recordException(e)
-                    currentSpan.setStatus(StatusCode.ERROR, "Failed to load currencies.")
-                }
-
                 _isLoading.value = false
                 _error.value = e.message ?: "Failed to load currencies"
             }
