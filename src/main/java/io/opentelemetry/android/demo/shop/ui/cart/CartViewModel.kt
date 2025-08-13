@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.android.demo.shop.model.Money
-import io.opentelemetry.android.demo.shop.model.ServerCart
 import io.opentelemetry.android.demo.shop.clients.CartApiService
 import io.opentelemetry.android.demo.shop.clients.ProductApiService
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,9 +13,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import io.opentelemetry.android.demo.OtelDemoApplication
-import io.opentelemetry.api.common.AttributeKey.doubleKey
-import io.opentelemetry.api.common.AttributeKey.longKey
-import io.opentelemetry.api.common.AttributeKey.stringKey
 import io.opentelemetry.api.trace.StatusCode
 
 data class CartItem(

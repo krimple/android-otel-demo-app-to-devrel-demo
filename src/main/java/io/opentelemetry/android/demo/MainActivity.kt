@@ -30,13 +30,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import io.honeycomb.opentelemetry.android.compose.LocalOpenTelemetryRum
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.opentelemetry.android.demo.about.AboutActivity
 import io.opentelemetry.android.demo.theme.DemoAppTheme
 import io.opentelemetry.android.demo.shop.ui.AstronomyShopActivity
 
@@ -46,9 +46,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            DemoAppTheme {
-                // A surface container using the 'background' color from the theme
-                Surface(
+            CompositionLocalProvider(LocalOpenTelemetryRum provides OtelDemoApplication.rum) {
+                DemoAppTheme {
+                    // A surface container using the 'background' color from the theme
+                    Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
@@ -57,7 +58,7 @@ class MainActivity : ComponentActivity() {
                         verticalArrangement = Arrangement.SpaceEvenly,
                     ) {
                         Row(
-                            Modifier.padding(all = 20.dp),
+                            Modifier.padding(start = 20.dp, end = 20.dp, bottom = 20.dp,top = 40.dp),
                             horizontalArrangement = Arrangement.Center,
                         ) {
                             CenterText(
@@ -85,13 +86,10 @@ class MainActivity : ComponentActivity() {
                         LauncherButton(text = "Go shopping", onClick = {
                             context.startActivity(Intent(this@MainActivity, AstronomyShopActivity::class.java))
                         })
-                        LauncherButton(text = "Learn more", onClick = {
-                            context.startActivity(Intent(this@MainActivity, AboutActivity::class.java))
-                        })
-
                     }
                 }
-                Log.d(TAG, "Main Activity started ")
+                    Log.d(TAG, "Main Activity started ")
+                }
             }
         }
     }

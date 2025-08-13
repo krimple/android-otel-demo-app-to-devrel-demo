@@ -17,6 +17,7 @@ import io.opentelemetry.android.demo.shop.clients.RecommendationService
 import io.opentelemetry.android.demo.shop.ui.products.ProductCard
 import io.opentelemetry.android.demo.shop.ui.products.RecommendedSection
 import io.opentelemetry.api.common.AttributeKey.doubleKey
+import io.honeycomb.opentelemetry.android.compose.HoneycombInstrumentedComposable
 import java.util.Locale
 
 @Composable
@@ -25,6 +26,7 @@ fun CartScreen(
     onCheckoutClick: () -> Unit,
     onProductClick: (String) -> Unit
 ) {
+    HoneycombInstrumentedComposable(name = "CartScreen") {
     val context = LocalContext.current
     val productCatalogClient = ProductCatalogClient()
     val productApiService = ProductApiService()
@@ -126,6 +128,7 @@ fun CartScreen(
             Spacer(modifier = Modifier.height(32.dp))
             RecommendedSection(recommendedProducts = recommendedProducts, onProductClick = onProductClick)
         }
+    }
     }
 }
 

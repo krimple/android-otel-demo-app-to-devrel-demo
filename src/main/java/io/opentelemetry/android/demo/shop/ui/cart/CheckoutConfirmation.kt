@@ -12,6 +12,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.opentelemetry.android.demo.shop.ui.products.ProductCard
+import io.honeycomb.opentelemetry.android.compose.HoneycombInstrumentedComposable
 import java.util.Locale
 
 @Composable
@@ -19,6 +20,7 @@ fun CheckoutConfirmationScreen(
     cartViewModel: CartViewModel,
     checkoutInfoViewModel: CheckoutInfoViewModel
 ) {
+    HoneycombInstrumentedComposable(name = "CheckoutConfirmationScreen") {
 
     val shippingInfo = checkoutInfoViewModel.shippingInfo
     val checkoutResponse = checkoutInfoViewModel.checkoutResponse
@@ -190,5 +192,6 @@ fun CheckoutConfirmationScreen(
                 Text(text = "Country: ${addressToShow.country}")
             }
         }
+    }
     }
 }
