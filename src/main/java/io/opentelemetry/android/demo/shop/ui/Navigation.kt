@@ -75,40 +75,40 @@ class InstrumentedAstronomyShopNavController(
     }
 
     fun navigateToProductDetail(productId: String) {
+        // Navigation events are discrete user interactions - create root span
         val tracer = OtelDemoApplication.getTracer()
-        val span = tracer?.spanBuilder("navigation")
-            ?.setAttribute("app.screen.name", "product_detail")
-            ?.setAttribute("app.operation.type", "navigate")
+        tracer?.spanBuilder("user.navigate")
+            ?.setAttribute("app.screen.destination", "product_detail")
             ?.setAttribute("app.product.id", productId)
             ?.setAttribute("app.interaction.type", "tap")
             ?.startSpan()
+            ?.end()  // End immediately - this is a discrete event, not a lasting operation
         
         delegate.navigateToProductDetail(productId)
-        span?.end()
     }
 
     fun navigateToCheckoutInfo() {
+        // Navigation events are discrete user interactions - create root span
         val tracer = OtelDemoApplication.getTracer()
-        val span = tracer?.spanBuilder("navigation")
-            ?.setAttribute("app.screen.name", "checkout_info")
-            ?.setAttribute("app.operation.type", "navigate")
+        tracer?.spanBuilder("user.navigate")
+            ?.setAttribute("app.screen.destination", "checkout_info")
             ?.setAttribute("app.interaction.type", "tap")
             ?.startSpan()
+            ?.end()  // End immediately - this is a discrete event
         
         delegate.navigateToCheckoutInfo()
-        span?.end()
     }
 
     fun navigateToCheckoutConfirmation() {
+        // Navigation events are discrete user interactions - create root span
         val tracer = OtelDemoApplication.getTracer()
-        val span = tracer?.spanBuilder("navigation")
-            ?.setAttribute("app.screen.name", "checkout_confirmation")
-            ?.setAttribute("app.operation.type", "navigate")
+        tracer?.spanBuilder("user.navigate")
+            ?.setAttribute("app.screen.destination", "checkout_confirmation")
             ?.setAttribute("app.interaction.type", "tap")
             ?.startSpan()
+            ?.end()  // End immediately - this is a discrete event
         
         delegate.navigateToCheckoutConfirmation()
-        span?.end()
     }
 }
 

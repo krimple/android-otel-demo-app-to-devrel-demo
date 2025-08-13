@@ -141,7 +141,7 @@ fun AstronomyShopScreen() {
                                         astronomyShopNavController.navigateToProductDetail(productId)
                                     },
                                     navigateToCheckout = {
-                                        astronomyShopNavController.navigateToCheckoutInfo()
+                                        astronomyShopNavController.navController.navigate(BottomNavItem.Cart.route)
                                     }
                                 )
                             }

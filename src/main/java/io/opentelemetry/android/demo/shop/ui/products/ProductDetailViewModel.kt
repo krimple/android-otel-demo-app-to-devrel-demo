@@ -25,29 +25,35 @@ class ProductDetailViewModel(
     val uiState: StateFlow<ProductDetailUiState> = _uiState.asStateFlow()
     
     fun loadProduct(productId: String, currencyCode: String = "USD") {
+        // User-initiated screen load - create root span
         val tracer = OtelDemoApplication.getTracer()
-        val span = tracer?.spanBuilder("ProductDetailViewModel.loadProduct")
+        val span = tracer?.spanBuilder("screen.load_product_detail")
             ?.setAttribute("app.screen.name", "product_detail")
             ?.setAttribute("app.product.id", productId)
             ?.setAttribute("app.user.currency", currencyCode)
-            ?.setAttribute("app.operation.type", "view_product_detail")
-            ?.setAttribute("app.view.model", "ProductDetailViewModel")
             ?.startSpan()
         
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
 
             try {
-                span?.makeCurrent().use {
-                    val product = productApiService.fetchProduct(productId, currencyCode)
-                    _uiState.value = ProductDetailUiState(
-                        product = product,
-                        isLoading = false,
-                        errorMessage = null
-                    )
-                    span?.setAttribute("app.product.name", product.name)
-                    span?.setAttribute("app.product.price.usd", product.priceValue())
+                // Make this span current for API calls within this coroutine
+                val scope = span?.makeCurrent()
+                val product = try {
+                    productApiService.fetchProduct(productId, currencyCode)
+                } finally {
+                    scope?.close()
                 }
+                
+                _uiState.value = ProductDetailUiState(
+                    product = product,
+                    isLoading = false,
+                    errorMessage = null
+                )
+                
+                span?.setAttribute("app.product.name", product.name)
+                span?.setAttribute("app.product.price.usd", product.priceValue())
+                
             } catch (e: Exception) {
                 span?.setStatus(StatusCode.ERROR)
                 span?.recordException(e)
