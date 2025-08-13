@@ -17,6 +17,7 @@ import io.opentelemetry.android.demo.shop.clients.RecommendationService
 import io.opentelemetry.android.demo.shop.ui.products.ProductCard
 import io.opentelemetry.android.demo.shop.ui.products.RecommendedSection
 import io.opentelemetry.api.common.AttributeKey.doubleKey
+import io.honeycomb.opentelemetry.android.compose.HoneycombInstrumentedComposable
 import java.util.Locale
 
 @Composable
@@ -25,6 +26,7 @@ fun CartScreen(
     onCheckoutClick: () -> Unit,
     onProductClick: (String) -> Unit
 ) {
+    HoneycombInstrumentedComposable(name = "CartScreen") {
     val context = LocalContext.current
     val productCatalogClient = ProductCatalogClient()
     val productApiService = ProductApiService()
@@ -127,6 +129,7 @@ fun CartScreen(
             RecommendedSection(recommendedProducts = recommendedProducts, onProductClick = onProductClick)
         }
     }
+    }
 }
 
 private fun clearCart(cartViewModel: CartViewModel) {
@@ -134,7 +137,6 @@ private fun clearCart(cartViewModel: CartViewModel) {
     val span = tracer?.spanBuilder("cart.clear")
         ?.setAttribute("app.cart.total.cost", cartViewModel.getTotalPrice())
         ?.setAttribute("app.cart.items.count", cartViewModel.uiState.value.cartItems.size.toLong())
-        ?.setAttribute("app.operation.type", "clear_cart")
         ?.setAttribute("app.screen.name", "cart")
         ?.setAttribute("app.interaction.type", "tap")
         ?.startSpan()

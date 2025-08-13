@@ -27,13 +27,11 @@ class ShippingApiService {
         parentContext: Context = Context.current()
     ): Money {
         val tracer = OtelDemoApplication.getTracer()
-        Log.d("otel.demo", "Getting shipping cost preview for ${cartViewModel.cartItems.value.size} items")
 
         val span = tracer?.spanBuilder("ShippingAPIService.getShippingCost")
             ?.setParent(parentContext)
             ?.setAttribute("app.user.currency", currencyCode)
             ?.setAttribute("app.cart.items.count", cartViewModel.cartItems.value.size.toLong())
-            ?.setAttribute("app.operation.type", "calculate_shipping")
             ?.startSpan()
 
         // Use checkout API as preview to get shipping cost
@@ -70,7 +68,6 @@ class ShippingApiService {
                 )
 
                 val requestBody = Gson().toJson(checkoutRequest)
-                Log.d("otel.demo", "Making shipping preview request to: $checkoutUrl")
 
                 val request = Request.Builder()
                     .url(checkoutUrl)
@@ -81,8 +78,6 @@ class ShippingApiService {
                 val responseBody = FetchHelpers.executeRequestWithBaggage(request, baggageHeaders)
                 val checkoutResponse = Gson().fromJson(responseBody, CheckoutResponse::class.java)
                 
-                Log.d("otel.demo", "Shipping preview completed - cost: ${checkoutResponse.shippingCost.formatCurrency()}")
-                
                 span?.setAttribute("app.shipping.cost", checkoutResponse.shippingCost.toDouble())
                 
                 checkoutResponse.shippingCost
@@ -90,11 +85,9 @@ class ShippingApiService {
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
             span?.recordException(e)
-            Log.d("otel.demo", "Shipping preview request failed, returning zero cost fallback")
             // Return zero cost as fallback
             Money(currencyCode = currencyCode, units = 0, nanos = 0)
         } finally {
-            Log.d("otel.demo", "Ending shipping preview span: $span")
             span?.end()
         }
     }

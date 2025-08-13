@@ -12,9 +12,6 @@ import androidx.lifecycle.viewModelScope
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.api.trace.Span
-import io.opentelemetry.api.common.AttributeKey.stringKey
-import io.opentelemetry.api.common.AttributeKey.longKey
-import io.opentelemetry.extension.kotlin.asContextElement
 
 class CurrencyViewModel() : ViewModel() {
     private val currencyApiService = CurrencyApiService()
@@ -48,7 +45,6 @@ class CurrencyViewModel() : ViewModel() {
                 ?.getString("selected_currency", "USD") ?: "USD"
         } catch (e: Exception) {
             // Fallback for tests or when OtelDemoApplication is not initialized
-            Log.d("otel.demo", "OtelDemoApplication not initialized, using USD default", e)
             "USD"
         }
     }
@@ -59,6 +55,7 @@ class CurrencyViewModel() : ViewModel() {
             val currencyPrefs = prefs.getSharedPreferences("currency_prefs", Context.MODE_PRIVATE)
             currencyPrefs.edit().putString("selected_currency", currency).apply()
         } catch (e: Exception) {
+            // TODO - what, claude??
             // Ignore save errors in tests
             Log.w("CurrencyViewModel", "Could not save currency preference: ${e.message}")
         }
@@ -75,29 +72,13 @@ class CurrencyViewModel() : ViewModel() {
             _error.value = null
 
             try {
+                // No outer span - just let the API call create its own single-span trace
                 val currencies = currencyApiService.fetchCurrencies()
                 _availableCurrencies.value = currencies
                 _isLoading.value = false
 
-                // Add attributes to the current span (created by fetchCurrencies)
-                val currentSpan = Span.current()
-                if (currentSpan.isRecording) {
-                    currentSpan.setAttribute("app.view.model", "CurrencyViewModel")
-                    currentSpan.setAttribute("app.operation.type", "load_available_currencies")
-                    currentSpan.setAttribute("app.currencies.count", currencies.size.toLong())
-                }
-
-                Log.d("otel.demo", "Currencies loaded successfully: ${currencies.size} currencies")
             } catch (e: Exception) {
                 Log.e("otel.demo", "Failed to load currencies: ${e.message}", e)
-
-                // Add error context to current span
-                val currentSpan = Span.current()
-                if (currentSpan.isRecording) {
-                    currentSpan.setAttribute("app.view.model", "CurrencyViewModel")
-                    currentSpan.setAttribute("app.operation.type", "load_available_currencies")
-                }
-
                 _isLoading.value = false
                 _error.value = e.message ?: "Failed to load currencies"
             }
@@ -113,7 +94,6 @@ class CurrencyViewModel() : ViewModel() {
             val currentSpan = Span.current()
             if (currentSpan.isRecording) {
                 currentSpan.setAttribute("app.view.model", "CurrencyViewModel")
-                currentSpan.setAttribute("app.operation.type", "select_currency")
                 currentSpan.setAttribute("app.user.currency", currency)
             }
 
@@ -123,11 +103,9 @@ class CurrencyViewModel() : ViewModel() {
             val currentSpan = Span.current()
             if (currentSpan.isRecording) {
                 currentSpan.setAttribute("app.view.model", "CurrencyViewModel")
-                currentSpan.setAttribute("app.operation.type", "select_currency")
                 currentSpan.setAttribute("app.user.currency", currency)
+                currentSpan.setStatus(StatusCode.ERROR, "no currency found")
             }
-
-            Log.w("otel.demo", "Currency $currency not available in loaded currencies")
         }
     }
 

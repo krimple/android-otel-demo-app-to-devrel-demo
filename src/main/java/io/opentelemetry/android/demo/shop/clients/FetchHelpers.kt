@@ -44,10 +44,6 @@ class FetchHelpers {
             client.newCall(tracedRequest).enqueue(object : Callback {
 
                 override fun onFailure(call: Call, e: IOException) {
-                    Log.d(
-                        "FetchHelpers",
-                        "SPAN ERROR: executeRequestWithBaggage span=$span, HTTP error ${e.message}"
-                    )
                     span?.setStatus(StatusCode.ERROR)
                     span?.recordException(e)
                     span?.end()
@@ -56,10 +52,6 @@ class FetchHelpers {
 
                 override fun onResponse(call: Call, response: Response): Unit {
                     if (!response.isSuccessful) {
-                        Log.d(
-                            "FetchHelpers",
-                            "SPAN ERROR: executeRequestWithBaggage span=$span, HTTP error ${response.message}"
-                        )
                         span?.setStatus(StatusCode.ERROR)
                         val ex =
                             IOException("error ${response.code}: ${response.body?.string()}")

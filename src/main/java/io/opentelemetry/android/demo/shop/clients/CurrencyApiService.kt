@@ -30,19 +30,16 @@ class CurrencyApiService {
             val listType = object : TypeToken<List<String>>() {}.type
             val currencies = Gson().fromJson<List<String>>(bodyText, listType)
 
-            // post-call enrichment of OK HTTP span
+            // post-call enrichment of span
             val currentSpan = Span.current()
             if (currentSpan.isRecording) {
-                currentSpan.setAttribute("app.operation.type", "fetch_currencies")
                 currentSpan.setAttribute("app.currencies.count", currencies.size.toLong())
-                currentSpan.updateName("CurrencyAPIService.fetchCurrencies") // Change from "executeRequest" to business name
             }
             return currencies
         } catch (e: Exception) {
             val currentSpan = Span.current()
             if (currentSpan.isRecording) {
                 currentSpan.setAttribute("app.operation.type", "fetch_currencies")
-                currentSpan.updateName("CurrencyAPIService.fetchCurrencies")
                 // Note: FetchHelpers already set ERROR status and recorded the HTTP exception
             }
             throw e

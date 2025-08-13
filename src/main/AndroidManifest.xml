@@ -23,11 +23,6 @@
             android:label="Astronomy Shop"
             />
         <activity
-            android:name=".about.AboutActivity"
-            android:exported="true"
-            android:label="About OpenTelemetry Android"
-            />
-        <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"

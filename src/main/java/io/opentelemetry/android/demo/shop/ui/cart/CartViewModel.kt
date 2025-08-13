@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.android.demo.shop.model.Money
-import io.opentelemetry.android.demo.shop.model.ServerCart
 import io.opentelemetry.android.demo.shop.clients.CartApiService
 import io.opentelemetry.android.demo.shop.clients.ProductApiService
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,9 +13,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import io.opentelemetry.android.demo.OtelDemoApplication
-import io.opentelemetry.api.common.AttributeKey.doubleKey
-import io.opentelemetry.api.common.AttributeKey.longKey
-import io.opentelemetry.api.common.AttributeKey.stringKey
 import io.opentelemetry.api.trace.StatusCode
 
 data class CartItem(
@@ -50,10 +46,10 @@ class CartViewModel(
     }
     
     private fun loadCart(currencyCode: String = "USD") {
+        // User-initiated screen load - create root span
         val tracer = OtelDemoApplication.getTracer()
-        val span = tracer?.spanBuilder("CartViewModel.loadCart")
-            ?.setAttribute("app.operation.type", "load_cart")
-            ?.setAttribute("app.view.model", "CartViewModel")
+        val span = tracer?.spanBuilder("screen.load_cart")
+            ?.setAttribute("app.screen.name", "cart")
             ?.setAttribute("app.user.currency", currencyCode)
             ?.startSpan()
         
@@ -61,8 +57,15 @@ class CartViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             
             try {
-                val serverCart = cartApiService.getCart()
-                val products = productApiService.fetchProducts(currencyCode)
+                // Make this span current for API calls within this coroutine
+                val scope = span?.makeCurrent()
+                val (serverCart, products) = try {
+                    val serverCart = cartApiService.getCart()
+                    val products = productApiService.fetchProducts(currencyCode)
+                    Pair(serverCart, products)
+                } finally {
+                    scope?.close()
+                }
                 val cartItems = serverCart.toCartItems(products)
                 
                 _uiState.value = CartUiState(
@@ -90,14 +93,13 @@ class CartViewModel(
     }
 
     fun addProduct(product: Product, quantity: Int, currencyCode: String = "USD") {
+        // User-initiated cart action - create root span
         val tracer = OtelDemoApplication.getTracer()
-        val span = tracer?.spanBuilder("CartViewModel.addProduct")
+        val span = tracer?.spanBuilder("user.add_to_cart")
             ?.setAttribute("app.product.id", product.id)
             ?.setAttribute("app.product.name", product.name)
             ?.setAttribute("app.product.price.usd", product.priceValue())
             ?.setAttribute("app.cart.item.quantity", quantity.toLong())
-            ?.setAttribute("app.operation.type", "add_product")
-            ?.setAttribute("app.view.model", "CartViewModel")
             ?.setAttribute("app.user.currency", currencyCode)
             ?.startSpan()
         
@@ -129,12 +131,19 @@ class CartViewModel(
                     span?.setAttribute("app.demo.trigger", "slow_animation")
                 }
                 
-                // Add to server-side cart
-                cartApiService.addItem(product.id, quantity)
-                
-                // Get updated cart state
-                val serverCart = cartApiService.getCart()
-                val products = productApiService.fetchProducts(currencyCode)
+                // Make this span current for API calls within this coroutine
+                val scope = span?.makeCurrent()
+                val (serverCart, products) = try {
+                    // Add to server-side cart
+                    cartApiService.addItem(product.id, quantity)
+                    
+                    // Get updated cart state
+                    val serverCart = cartApiService.getCart()
+                    val products = productApiService.fetchProducts(currencyCode)
+                    Pair(serverCart, products)
+                } finally {
+                    scope?.close()
+                }
                 val cartItems = serverCart.toCartItems(products)
                 
                 _uiState.value = CartUiState(
@@ -181,11 +190,9 @@ class CartViewModel(
 
     fun clearCart(currencyCode: String = "USD") {
         val tracer = OtelDemoApplication.getTracer()
-        val span = tracer?.spanBuilder("CartViewModel.clearCart")
+        val span = tracer?.spanBuilder("user.clear_cart")
             ?.setAttribute("app.cart.total.cost", getTotalPrice())
             ?.setAttribute("app.cart.items.count", _uiState.value.cartItems.size.toLong())
-            ?.setAttribute("app.operation.type", "clear_cart")
-            ?.setAttribute("app.view.model", "CartViewModel")
             ?.setAttribute("app.user.currency", currencyCode)
             ?.startSpan()
         
@@ -193,7 +200,13 @@ class CartViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true)
             
             try {
-                cartApiService.emptyCart()
+                // Make this span current for API calls within this coroutine
+                val scope = span?.makeCurrent()
+                try {
+                    cartApiService.emptyCart()
+                } finally {
+                    scope?.close()
+                }
                 
                 _uiState.value = CartUiState(
                     cartItems = emptyList(),

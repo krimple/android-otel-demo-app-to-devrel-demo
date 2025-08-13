@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.opentelemetry.android.demo.shop.ui.currency.CurrencyViewModel
+import io.honeycomb.opentelemetry.android.compose.HoneycombInstrumentedComposable
 
 @Composable
 fun InfoField(
@@ -82,6 +83,7 @@ fun InfoScreen(
     cartViewModel: CartViewModel,
     currencyViewModel: CurrencyViewModel
 ) {
+    HoneycombInstrumentedComposable(name = "CheckoutInfoScreen") {
     val selectedCurrency by currencyViewModel.selectedCurrency.collectAsState()
     
     val shippingInfo = checkoutInfoViewModel.shippingInfo
@@ -233,6 +235,7 @@ fun InfoScreen(
                 .align(Alignment.TopStart)
                 .padding(8.dp)
         )
+    }
     }
 }
 

@@ -35,15 +35,10 @@ class CheckoutApiService(
         val span = tracer?.spanBuilder("app.checkout.place_order")
             ?.startSpan()
 
-        Log.d("CheckoutApiService", "SPAN CREATED: checkout.place_order span=$span, tracer=$tracer")
-
         span?.setAttribute(stringKey("currency.code"), currencyCode)
-        span?.setAttribute("app.temp.session.id", sessionManager.currentSessionId)
 
         // TODO - if no span, then what?
-        Log.d("CheckoutApiService", "SPAN MAKING CURRENT: checkout.place_order span=$span")
         return span?.makeCurrent().use {
-            Log.d("CheckoutApiService", "SPAN IS NOW CURRENT: checkout.place_order span=$span")
             try {
                 val checkoutRequest = buildCheckoutRequest(checkoutInfoViewModel, currencyCode)
 
@@ -61,7 +56,6 @@ class CheckoutApiService(
 
                 // Note: Cart items now come from server-side cart via sessionId
                 span?.setAttribute("app.checkout.cart.source", "server_side")
-                span?.setAttribute("app.temp.session.id", sessionManager.currentSessionId)
 
                 val requestBody = Gson().toJson(checkoutRequest)
                 val checkoutUrl = "${OtelDemoApplication.apiEndpoint}/checkout?currencyCode=$currencyCode&sessionId=${sessionManager.currentSessionId}"
@@ -72,9 +66,7 @@ class CheckoutApiService(
 
                 val baggageHeaders = mapOf("Baggage" to "session.id=${sessionManager.currentSessionId}")
 
-                Log.d("CheckoutApiService", "BEFORE HTTP REQUEST: checkout.place_order span=$span, about to call FetchHelpers.executeRequestWithBaggage")
                 val responseBody = FetchHelpers.executeRequestWithBaggage(request, baggageHeaders)
-                Log.d("CheckoutApiService", "AFTER HTTP REQUEST: checkout.place_order span=$span, FetchHelpers.executeRequest completed")
                 val checkoutResponse = Gson().fromJson(responseBody, CheckoutResponse::class.java)
 
                 // Add response attributes
@@ -101,7 +93,6 @@ class CheckoutApiService(
                 // Reset session after successful checkout
                 sessionManager.resetSession()
                 span?.setAttribute("app.checkout.session.reset", true)
-                span?.setAttribute("app.temp.session.id", sessionManager.currentSessionId)
 
                 // return this response
                 checkoutResponse
@@ -112,9 +103,7 @@ class CheckoutApiService(
                 span?.setAttribute(stringKey("error.message"), e.message ?: "Unknown error")
                 throw e
             } finally {
-                Log.d("CheckoutApiService", "SPAN ENDING: checkout.place_order span=$span")
                 span?.end()
-                Log.d("CheckoutApiService", "SPAN ENDED: checkout.place_order span=$span")
             }
         }
     }
