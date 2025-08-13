@@ -23,6 +23,7 @@ import io.opentelemetry.api.logs.LogRecordBuilder
 import io.opentelemetry.api.metrics.LongCounter
 import io.opentelemetry.api.trace.Tracer
 import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 const val TAG = "otel.demo"
 
@@ -66,11 +67,14 @@ class OtelDemoApplication : Application() {
 
         try {
             rum = Honeycomb.configure(this, options)
-            Log.w(TAG, "RUM session started with service: $serviceName")
-            // Initialize the singleton tracer here
-            
+
             // Initialize OkHttpClient after telemetry is configured
-            httpClient = OkHttpClient.Builder()
+            // make sure to add some timeout time, as the defaults are too low
+            // and we're getting CANCELs
+            httpClient = OkHttpClient
+                .Builder()
+                .connectTimeout(1, TimeUnit.MINUTES)
+                .callTimeout(1, TimeUnit.MINUTES)
                 .build()
             Log.d(TAG, "OkHttpClient singleton initialized")
         } catch (e: Exception) {
