@@ -17,6 +17,10 @@
         android:theme="@style/Theme.AppCompat.Light"
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
+        <meta-data 
+            android:name="io.honeycomb.proguard.uuid"
+            android:value="${PROGUARD_UUID}" 
+            />
         <activity
             android:name=".shop.ui.AstronomyShopActivity"
             android:exported="true"

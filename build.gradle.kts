@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.byteBuddy)
+    alias(libs.plugins.proguardUuid)
 }
 
 val localProperties = Properties()
