@@ -58,7 +58,9 @@ class AstronomyShopActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            AstronomyShopScreen()
+            CompositionLocalProvider(LocalOpenTelemetryRum provides OtelDemoApplication.rum) {
+                AstronomyShopScreen()
+            }
         }
     }
 }
