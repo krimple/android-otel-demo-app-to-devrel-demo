@@ -58,14 +58,16 @@ class AstronomyShopActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            AstronomyShopScreen()
+            CompositionLocalProvider(LocalOpenTelemetryRum provides OtelDemoApplication.rum) {
+                AstronomyShopScreen()
+            }
         }
     }
 }
 
 @Composable
 fun AstronomyShopScreen() {
-    HoneycombInstrumentedComposable("main activity") {
+    HoneycombInstrumentedComposable(name = "AstronomyShopScreen") {
         val context = LocalContext.current
         val currencyViewModel: CurrencyViewModel = viewModel()
         val checkoutApiService = remember { CheckoutApiService() }

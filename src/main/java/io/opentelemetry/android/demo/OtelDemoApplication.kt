@@ -97,7 +97,7 @@ class OtelDemoApplication : Application() {
         var apiEndpoint: String = "https://www.zurelia.honeydemo.io/api"
 
         fun getTracer(): Tracer? {
-            return rum?.openTelemetry?.getTracer("otel.demo.app", "1.0.0")
+            return rum?.openTelemetry?.getTracer("otel.demo.app", "1.0.1")
         }
 
         fun counter(name: String): LongCounter? {
