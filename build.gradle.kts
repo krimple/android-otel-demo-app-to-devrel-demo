@@ -86,7 +86,11 @@ dependencies {
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
     implementation(libs.opentelemetry.api.incubator)
+    implementation(libs.honeycomb.opentelemetry.android)
+    implementation(libs.honeycomb.opentelemetry.android.compose)
     implementation("io.opentelemetry:opentelemetry-extension-kotlin:1.47.0")
+
+
 
     testImplementation(libs.junit)
     testImplementation("org.mockito:mockito-core:5.8.0")
@@ -104,8 +108,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.opentelemetry.sdk)
     implementation(libs.otel.kotlin.extension)
-    implementation(libs.honeycomb.opentelemetry.android)
-    implementation(libs.honeycomb.opentelemetry.android.compose)
     implementation(libs.android.agent)
     implementation(libs.otel.semconv.incubating)
     implementation(libs.opentelemetry.exporter.otlp)
