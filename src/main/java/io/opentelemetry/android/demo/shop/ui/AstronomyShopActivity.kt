@@ -67,7 +67,7 @@ class AstronomyShopActivity : AppCompatActivity() {
 
 @Composable
 fun AstronomyShopScreen() {
-    HoneycombInstrumentedComposable("main activity") {
+    HoneycombInstrumentedComposable(name = "AstronomyShopScreen") {
         val context = LocalContext.current
         val currencyViewModel: CurrencyViewModel = viewModel()
         val checkoutApiService = remember { CheckoutApiService() }

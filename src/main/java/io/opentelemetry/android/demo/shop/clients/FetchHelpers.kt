@@ -37,10 +37,6 @@ class FetchHelpers {
                 span?.end()
             }
 
-            // span?.setAttribute("http.method", tracedRequest.method)
-            // span?.setAttribute("http.url", tracedRequest.url.toString())
-            // span?.setAttribute("baggage.headers.count", baggageHeaders.size.toLong())
-
             client.newCall(tracedRequest).enqueue(object : Callback {
 
                 override fun onFailure(call: Call, e: IOException) {
@@ -59,8 +55,9 @@ class FetchHelpers {
                         span?.end()
                         cont.resumeWithException(ex)
                     } else {
+                        val responseBody = response.body?.string() ?: ""
                         span?.end()
-                        cont.resume(response.body?.string() ?: "")
+                        cont.resume(responseBody)
                     }
                 }
             })
