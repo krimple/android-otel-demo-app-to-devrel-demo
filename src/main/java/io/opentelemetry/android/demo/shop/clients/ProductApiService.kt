@@ -9,6 +9,9 @@ import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.context.Context
 import okhttp3.Request
 import android.util.Log
+import io.honeycomb.opentelemetry.android.Honeycomb
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
 
 class ProductApiService(
 ) {
@@ -35,7 +38,14 @@ class ProductApiService(
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
-            span?.recordException(e)
+            if (OtelDemoApplication.rum !== null) {
+                Honeycomb.logException(
+                    OtelDemoApplication.rum!!,
+                    e,
+                    null,
+                    Thread.currentThread()
+                )
+            }
             throw e
         } finally {
             span?.end()
@@ -64,6 +74,14 @@ class ProductApiService(
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
+            if (OtelDemoApplication.rum !== null) {
+                Honeycomb.logException(
+                    OtelDemoApplication.rum!!,
+                    e,
+                    null,
+                    Thread.currentThread()
+                )
+            }
             span?.recordException(e)
             throw e
         } finally {

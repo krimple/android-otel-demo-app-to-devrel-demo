@@ -10,6 +10,9 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import android.util.Log
+import io.honeycomb.opentelemetry.android.Honeycomb
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
 import java.io.IOException
 
 class CartApiService {
@@ -45,7 +48,14 @@ class CartApiService {
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
-            span?.recordException(e)
+            if (OtelDemoApplication.rum !== null) {
+                Honeycomb.logException(
+                    OtelDemoApplication.rum!!,
+                    e,
+                    null,
+                    Thread.currentThread()
+                )
+            }
             throw e
         } finally {
             span?.end()
@@ -80,12 +90,26 @@ class CartApiService {
                 ServerCart(emptyList())
             } else {
                 span?.setStatus(StatusCode.ERROR)
-                span?.recordException(e)
+                if (OtelDemoApplication.rum !== null) {
+                    Honeycomb.logException(
+                        OtelDemoApplication.rum!!,
+                        e,
+                        null,
+                        Thread.currentThread()
+                    )
+                }
                 throw e
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
-            span?.recordException(e)
+            if (OtelDemoApplication.rum !== null) {
+                Honeycomb.logException(
+                    OtelDemoApplication.rum!!,
+                    e,
+                    null,
+                    Thread.currentThread()
+                )
+            }
             throw e
         } finally {
             span?.end()
@@ -110,7 +134,14 @@ class CartApiService {
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
-            span?.recordException(e)
+            if (OtelDemoApplication.rum !== null) {
+                Honeycomb.logException(
+                    OtelDemoApplication.rum!!,
+                    e,
+                    null,
+                    Thread.currentThread()
+                )
+            }
             throw e
         } finally {
             span?.end()

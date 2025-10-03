@@ -18,6 +18,7 @@ import java.io.IOException
 import java.util.Properties
 import io.honeycomb.opentelemetry.android.Honeycomb
 import io.honeycomb.opentelemetry.android.HoneycombOptions
+import io.honeycomb.opentelemetry.android.OtlpProtocol
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.api.logs.LogRecordBuilder
 import io.opentelemetry.api.metrics.LongCounter
@@ -46,22 +47,20 @@ class OtelDemoApplication : Application() {
         
         val apiKey = otelProperties.getProperty("HONEYCOMB_API_KEY") 
             ?: throw IllegalStateException("HONEYCOMB_API_KEY must be set in otel.properties")
-        val serviceName = otelProperties.getProperty("SERVICE_NAME") 
+        val serviceName = otelProperties.getProperty("SERVICE_NAME")
             ?: throw IllegalStateException("SERVICE_NAME must be set in otel.properties")
-        val tracesEndpoint = otelProperties.getProperty("TRACES_ENDPOINT")
-            ?: throw IllegalStateException("TRACES_ENDPOINT must be set in otel.properties")
-        val logsEndpoint = otelProperties.getProperty("LOGS_ENDPOINT")
-            ?: throw IllegalStateException("LOGS_ENDPOINT must be set in otel.properties")
+        val honeycombEndpoint = otelProperties.getProperty("HONEYCOMB_ENDPOINT")
+            ?: throw IllegalStateException("HONEYCOMB_ENDPOINT must be set in otel.properties")
 
         apiEndpoint = otelProperties.getProperty("API_ENDPOINT")
             ?: throw IllegalStateException("API_ENDPOINT must be set in otel.properties")
         
         val options = HoneycombOptions.builder(this)
             .setApiKey(apiKey)
-            .setApiEndpoint(tracesEndpoint)
-            .setLogsApiEndpoint(logsEndpoint)
+            .setApiEndpoint(honeycombEndpoint)
+            .setLogsProtocol(OtlpProtocol.HTTP_PROTOBUF)
             .setServiceName(serviceName)
-            .setServiceVersion("1.0")
+            .setServiceVersion("1.0.2")
             .setDebug(true)
             .build()
 

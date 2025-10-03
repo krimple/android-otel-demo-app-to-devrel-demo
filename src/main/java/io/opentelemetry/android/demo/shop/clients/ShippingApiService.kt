@@ -12,6 +12,9 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import android.util.Log
+import io.honeycomb.opentelemetry.android.Honeycomb
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
 
 class ShippingApiService {
     private val sessionManager = SessionManager.getInstance()
@@ -84,7 +87,14 @@ class ShippingApiService {
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
-            span?.recordException(e)
+            if (OtelDemoApplication.rum !== null) {
+                Honeycomb.logException(
+                    OtelDemoApplication.rum!!,
+                    e,
+                    null,
+                    Thread.currentThread()
+                )
+            }
             // Return zero cost as fallback
             Money(currencyCode = currencyCode, units = 0, nanos = 0)
         } finally {
