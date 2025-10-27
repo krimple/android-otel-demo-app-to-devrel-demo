@@ -74,6 +74,8 @@ class OtelDemoApplication : Application() {
                 .Builder()
                 .connectTimeout(1, TimeUnit.MINUTES)
                 .callTimeout(1, TimeUnit.MINUTES)
+                .readTimeout(1, TimeUnit.MINUTES)
+                .writeTimeout(1, TimeUnit.MINUTES)
                 .build()
             Log.d(TAG, "OkHttpClient singleton initialized")
         } catch (e: Exception) {
@@ -101,10 +103,6 @@ class OtelDemoApplication : Application() {
 
         fun counter(name: String): LongCounter? {
             return rum?.openTelemetry?.getMeter("otel.demo.app")?.counterBuilder(name)?.build()
-        }
-
-        fun eventBuilder(scopeName: String, eventName: String): LogRecordBuilder? {
-            return rum?.openTelemetry?.logsBridge?.get(scopeName)?.logRecordBuilder()?.setBody(eventName)
         }
 
         fun getHttpClient(): OkHttpClient {

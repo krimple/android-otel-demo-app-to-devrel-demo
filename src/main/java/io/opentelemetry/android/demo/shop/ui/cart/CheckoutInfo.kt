@@ -81,7 +81,8 @@ fun InfoScreen(
     upPress: () -> Unit,
     checkoutInfoViewModel: CheckoutInfoViewModel,
     cartViewModel: CartViewModel,
-    currencyViewModel: CurrencyViewModel
+    currencyViewModel: CurrencyViewModel,
+    isPlacingOrder: Boolean = false
 ) {
     HoneycombInstrumentedComposable(name = "CheckoutInfoScreen") {
     val selectedCurrency by currencyViewModel.selectedCurrency.collectAsState()
@@ -223,7 +224,7 @@ fun InfoScreen(
                     onPlaceOrderClick()
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = canProceed
+                enabled = canProceed && !isPlacingOrder
             ) {
                 Text("Place Order")
             }
@@ -235,6 +236,39 @@ fun InfoScreen(
                 .align(Alignment.TopStart)
                 .padding(8.dp)
         )
+
+        // Loading overlay when placing order
+        if (isPlacingOrder) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .clickable(enabled = false) { },
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    modifier = Modifier
+                        .padding(32.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Placing your order...",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            }
+        }
     }
     }
 }

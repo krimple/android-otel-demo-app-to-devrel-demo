@@ -7,7 +7,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.opentelemetry.android.demo.OtelDemoApplication
@@ -16,7 +15,6 @@ import io.opentelemetry.android.demo.shop.clients.ProductCatalogClient
 import io.opentelemetry.android.demo.shop.clients.RecommendationService
 import io.opentelemetry.android.demo.shop.ui.products.ProductCard
 import io.opentelemetry.android.demo.shop.ui.products.RecommendedSection
-import io.opentelemetry.api.common.AttributeKey.doubleKey
 import io.honeycomb.opentelemetry.android.compose.HoneycombInstrumentedComposable
 import java.util.Locale
 
@@ -26,8 +24,8 @@ fun CartScreen(
     onCheckoutClick: () -> Unit,
     onProductClick: (String) -> Unit
 ) {
-    HoneycombInstrumentedComposable(name = "CartScreen") {
-    val context = LocalContext.current
+    //HoneycombInstrumentedComposable(name = "CartScreen") {
+    // That instrumentation currently emits a 20Tera-MS duration randomly...
     val productCatalogClient = ProductCatalogClient()
     val productApiService = ProductApiService()
     val recommendationService = remember { RecommendationService(productCatalogClient, productApiService, cartViewModel) }
@@ -129,7 +127,7 @@ fun CartScreen(
             RecommendedSection(recommendedProducts = recommendedProducts, onProductClick = onProductClick)
         }
     }
-    }
+    //}
 }
 
 private fun clearCart(cartViewModel: CartViewModel) {

@@ -1,7 +1,9 @@
 package io.opentelemetry.android.demo.shop.ui.cart
 
+import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.honeycomb.opentelemetry.android.Honeycomb
 import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.android.demo.shop.model.Money
 import io.opentelemetry.android.demo.shop.clients.CartApiService
@@ -13,6 +15,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import io.opentelemetry.android.demo.OtelDemoApplication
+import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.StatusCode
 
 data class CartItem(
@@ -122,8 +125,20 @@ class CartViewModel(
                 val totalExplorascopes = currentExplorascopes + quantity
                 
                 if (totalExplorascopes == 10) {
-                    span?.setAttribute("app.demo.trigger", "crash")
+                    // mark the span in error (for Honeycomb)
+                    span?.setStatus(StatusCode.ERROR)
+                    // create an exception and send to a Honeycomb trace-participating log message
+                    var exception = Exception("The application crashed - unknown error.");
+                    if (OtelDemoApplication.rum != null) {
+                        Honeycomb.logException(
+                            OtelDemoApplication.rum!!,
+                            exception,
+                            null,
+                            Thread.currentThread())
+                    }
+                    throw exception;
                 } else if (totalExplorascopes == 9) {
+                    // TODO - more interesting hang scenario with backend delay
                     span?.setAttribute("app.demo.trigger", "hang")
                 }
                 

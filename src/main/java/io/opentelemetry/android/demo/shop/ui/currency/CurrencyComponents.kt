@@ -22,7 +22,9 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun CurrencyToggle(
     currentCurrency: String,
-    popularCurrencies: List<String> = listOf("USD", "EUR", "GBP", "JPY"),
+    // n.b. TAU = Taurids coin. For Aliens (get it, telescope?)
+    // Should blow up nicely
+    popularCurrencies: List<String> = listOf("USD", "EUR", "GBP", "JPY", "TAU"),
     onCurrencySelected: (String) -> Unit,
     onShowAllCurrencies: () -> Unit,
     modifier: Modifier = Modifier
@@ -236,6 +238,7 @@ private fun getCurrencySymbol(currencyCode: String): String {
         "MYR" -> "RM"
         "IDR" -> "Rp"
         "NZD" -> "NZ$"
+        "TAU" -> "👽"
         else -> currencyCode
     }
 }
@@ -275,6 +278,7 @@ private fun getCurrencyName(currencyCode: String): String {
         "MYR" -> "Malaysian Ringgit"
         "IDR" -> "Indonesian Rupiah"
         "NZD" -> "New Zealand Dollar"
+        "TAU" -> "TauridCoin"
         else -> currencyCode
     }
 }
