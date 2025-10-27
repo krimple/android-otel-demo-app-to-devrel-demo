@@ -98,8 +98,8 @@ class CheckoutApiService(
                 // return this response
                 checkoutResponse
             } catch (e: Exception) {
-                span?.setStatus(StatusCode.ERROR, "Failed to place order due to error in API call");
-                // Honeycomb.logException(OtelDemoApplication.rum!!, e, null, Thread.currentThread());
+                span?.setStatus(StatusCode.ERROR, "Failed to place order");
+                Honeycomb.logException(OtelDemoApplication.rum!!, e, null, Thread.currentThread());
                 /*Log.d("CheckoutApiService", "SPAN ERROR: checkout.place_order span=$span, exception=${e.message}")
                 */
                 // span?.recordException(e)

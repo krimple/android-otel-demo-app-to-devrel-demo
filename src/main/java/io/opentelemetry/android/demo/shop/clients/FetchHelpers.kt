@@ -43,8 +43,6 @@ class FetchHelpers {
                         //AttributeKey.stringKey(EVENT_NAME.toString()), ??
                         AttributeKey.stringKey("name"),
                         "exception",
-                        AttributeKey.booleanKey("error"),
-                        true,
                     ),
                     Thread.currentThread()
                 )
