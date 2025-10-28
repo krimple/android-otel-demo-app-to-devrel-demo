@@ -56,7 +56,6 @@ class ProductDetailViewModel(
                 
             } catch (e: Exception) {
                 span?.setStatus(StatusCode.ERROR)
-                span?.recordException(e)
                 _uiState.value = ProductDetailUiState(
                     product = null,
                     isLoading = false,

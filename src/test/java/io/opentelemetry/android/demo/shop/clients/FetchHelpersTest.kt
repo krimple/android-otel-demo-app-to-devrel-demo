@@ -68,7 +68,6 @@ class FetchHelpersTest {
 
             override fun onFailure(call: Call, e: IOException) {
                 span?.setStatus(StatusCode.ERROR)
-                span?.recordException(e)
                 span?.end()
                 cont.resumeWithException(e)
             }

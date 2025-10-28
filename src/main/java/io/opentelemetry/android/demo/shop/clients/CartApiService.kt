@@ -1,7 +1,6 @@
 package io.opentelemetry.android.demo.shop.clients
 
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.model.*
 import io.opentelemetry.android.demo.shop.session.SessionManager
@@ -9,10 +8,6 @@ import io.opentelemetry.api.trace.StatusCode
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import android.util.Log
-import io.honeycomb.opentelemetry.android.Honeycomb
-import io.opentelemetry.api.common.AttributeKey
-import io.opentelemetry.api.common.Attributes
 import java.io.IOException
 
 class CartApiService {
@@ -49,7 +44,7 @@ class CartApiService {
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
             if (OtelDemoApplication.rum !== null) {
-                Honeycomb.logException(
+                OtelDemoApplication.logException(
                     OtelDemoApplication.rum!!,
                     e,
                     null,
@@ -91,7 +86,7 @@ class CartApiService {
             } else {
                 span?.setStatus(StatusCode.ERROR)
                 if (OtelDemoApplication.rum !== null) {
-                    Honeycomb.logException(
+                    OtelDemoApplication.logException(
                         OtelDemoApplication.rum!!,
                         e,
                         null,
@@ -103,7 +98,7 @@ class CartApiService {
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
             if (OtelDemoApplication.rum !== null) {
-                Honeycomb.logException(
+                OtelDemoApplication.logException(
                     OtelDemoApplication.rum!!,
                     e,
                     null,
@@ -135,7 +130,7 @@ class CartApiService {
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
             if (OtelDemoApplication.rum !== null) {
-                Honeycomb.logException(
+                OtelDemoApplication.logException(
                     OtelDemoApplication.rum!!,
                     e,
                     null,

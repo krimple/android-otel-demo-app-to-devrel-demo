@@ -1,9 +1,7 @@
 package io.opentelemetry.android.demo.shop.ui.cart
 
-import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.honeycomb.opentelemetry.android.Honeycomb
 import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.android.demo.shop.model.Money
 import io.opentelemetry.android.demo.shop.clients.CartApiService
@@ -15,7 +13,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import io.opentelemetry.android.demo.OtelDemoApplication
-import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.android.demo.OtelDemoApplication.Companion.rum
 import io.opentelemetry.api.trace.StatusCode
 
 data class CartItem(
@@ -88,7 +86,7 @@ class CartViewModel(
                 )
                 
                 span?.setStatus(StatusCode.ERROR)
-                span?.recordException(e)
+                OtelDemoApplication.logException(rum, e, null, Thread.currentThread())
             } finally {
                 span?.end()
             }
@@ -130,7 +128,7 @@ class CartViewModel(
                     // create an exception and send to a Honeycomb trace-participating log message
                     var exception = Exception("The application crashed - unknown error.");
                     if (OtelDemoApplication.rum != null) {
-                        Honeycomb.logException(
+                        OtelDemoApplication.logException(
                             OtelDemoApplication.rum!!,
                             exception,
                             null,
@@ -182,7 +180,6 @@ class CartViewModel(
                 )
                 
                 span?.setStatus(StatusCode.ERROR)
-                span?.recordException(e)
             } finally {
                 span?.end()
             }
@@ -236,7 +233,6 @@ class CartViewModel(
                 )
                 
                 span?.setStatus(StatusCode.ERROR)
-                span?.recordException(e)
             } finally {
                 span?.end()
             }

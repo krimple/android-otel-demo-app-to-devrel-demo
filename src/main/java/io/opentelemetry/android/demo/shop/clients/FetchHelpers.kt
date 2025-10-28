@@ -1,13 +1,11 @@
 package io.opentelemetry.android.demo.shop.clients
 
 import android.util.Log
-import io.honeycomb.opentelemetry.android.Honeycomb
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.api.common.AttributeKey
 import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.SpanKind
 import io.opentelemetry.api.trace.StatusCode
-import io.opentelemetry.semconv.incubating.EventIncubatingAttributes.EVENT_NAME
 import java.io.IOException
 import java.io.InterruptedIOException
 import kotlin.coroutines.resume
@@ -19,7 +17,6 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.internal.http2.ErrorCode
 import okhttp3.internal.http2.StreamResetException
-import java.util.logging.LogRecord
 
 class FetchHelpers {
     companion object {
@@ -34,13 +31,12 @@ class FetchHelpers {
         private fun logRumOrFallback(e: Throwable, req: Request) {
             val rum = OtelDemoApplication.rum
             if (rum != null) {
-                Honeycomb.logException(
+                OtelDemoApplication.logException(
                     rum,
                     e,
                     Attributes.of(
                         AttributeKey.stringKey("app.tracedRequest.url"),
                         req.url.toString(),
-                        //AttributeKey.stringKey(EVENT_NAME.toString()), ??
                         AttributeKey.stringKey("name"),
                         "exception",
                     ),
