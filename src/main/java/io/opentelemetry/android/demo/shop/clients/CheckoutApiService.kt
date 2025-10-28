@@ -16,6 +16,8 @@ import io.opentelemetry.api.common.AttributeKey.longKey
 import io.opentelemetry.api.common.AttributeKey.stringKey
 import io.opentelemetry.api.trace.StatusCode
 import android.util.Log
+import io.honeycomb.opentelemetry.android.Honeycomb
+import io.honeycomb.opentelemetry.android.compose.LocalOpenTelemetryRum
 
 class CheckoutApiService(
 ) {
@@ -97,10 +99,10 @@ class CheckoutApiService(
                 // return this response
                 checkoutResponse
             } catch (e: Exception) {
-                Log.d("CheckoutApiService", "SPAN ERROR: checkout.place_order span=$span, exception=${e.message}")
-                span?.recordException(e)
-                span?.setStatus(StatusCode.ERROR)
-                span?.setAttribute(stringKey("error.message"), e.message ?: "Unknown error")
+                // the error occurred inside of the placeOrder method, so the exception
+                // was reported there. This is just an errored span.
+                span?.setStatus(StatusCode.ERROR, "Failed to place order");
+
                 throw e
             } finally {
                 span?.end()

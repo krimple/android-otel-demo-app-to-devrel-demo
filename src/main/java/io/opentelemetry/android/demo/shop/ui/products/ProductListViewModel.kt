@@ -73,7 +73,6 @@ class ProductListViewModel(
                 )
                 
                 span?.setStatus(StatusCode.ERROR)
-                span?.recordException(e)
             } finally {
                 span?.end()
             }

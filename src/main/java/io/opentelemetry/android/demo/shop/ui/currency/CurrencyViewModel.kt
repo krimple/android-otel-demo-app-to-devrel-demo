@@ -74,7 +74,9 @@ class CurrencyViewModel() : ViewModel() {
             try {
                 // No outer span - just let the API call create its own single-span trace
                 val currencies = currencyApiService.fetchCurrencies()
-                _availableCurrencies.value = currencies
+                // HACK - add currency that doesn't exist
+                val currenciesWithTau = currencies + "TAU"
+                _availableCurrencies.value = currenciesWithTau
                 _isLoading.value = false
 
             } catch (e: Exception) {

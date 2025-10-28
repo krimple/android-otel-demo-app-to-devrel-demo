@@ -10,6 +10,7 @@ import io.opentelemetry.android.demo.shop.model.CheckoutResponse
 import io.opentelemetry.android.demo.shop.model.Money
 import kotlinx.coroutines.launch
 import io.opentelemetry.android.demo.OtelDemoApplication
+import io.opentelemetry.android.demo.OtelDemoApplication.Companion.rum
 import io.opentelemetry.api.trace.StatusCode
 
 data class ShippingInfo(
@@ -135,7 +136,7 @@ class CheckoutInfoViewModel : ViewModel() {
                         hasCalculatedShipping = true
                     } catch (e: Exception) {
                         span?.setStatus(StatusCode.ERROR)
-                        span?.recordException(e)
+                        OtelDemoApplication.logException(rum, e, null, Thread.currentThread())
                         shippingCalculationError = "Failed to calculate shipping: ${e.message}"
                     } finally {
                         isCalculatingShipping = false

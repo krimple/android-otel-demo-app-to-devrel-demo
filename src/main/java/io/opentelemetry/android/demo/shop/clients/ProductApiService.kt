@@ -6,9 +6,7 @@ import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.android.demo.shop.session.SessionManager
 import io.opentelemetry.api.trace.StatusCode
-import io.opentelemetry.context.Context
 import okhttp3.Request
-import android.util.Log
 
 class ProductApiService(
 ) {
@@ -35,7 +33,14 @@ class ProductApiService(
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
-            span?.recordException(e)
+            if (OtelDemoApplication.rum !== null) {
+                OtelDemoApplication.logException(
+                    OtelDemoApplication.rum!!,
+                    e,
+                    null,
+                    Thread.currentThread()
+                )
+            }
             throw e
         } finally {
             span?.end()
@@ -63,9 +68,9 @@ class ProductApiService(
                 Gson().fromJson(bodyText, Product::class.java)
             }
         } catch (e: Exception) {
+            // mark the span in error
             span?.setStatus(StatusCode.ERROR)
-            span?.recordException(e)
-            throw e
+            throw e;
         } finally {
             span?.end()
         }

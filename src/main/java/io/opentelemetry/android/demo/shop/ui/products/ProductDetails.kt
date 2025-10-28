@@ -285,26 +285,12 @@ fun AddToCartButton(
     }
 
     if (showCrashPopup) {
-        ConfirmPopup(
-            text = "This will crash the app",
-            onConfirm = {
-                multiThreadCrashing()
-            },
-            onDismiss = {
-                showCrashPopup = false
-            }
-        )
+        multiThreadCrashing()
+
     }
+
     if (showANRPopup) {
-        ConfirmPopup(
-            text = "This will freeze the app",
-            onConfirm = {
-                appFreezing()
-            },
-            onDismiss = {
-                showCrashPopup = false
-            }
-        )
+        appFreezing()
     }
 }
 

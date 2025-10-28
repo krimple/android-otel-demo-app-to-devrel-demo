@@ -37,6 +37,7 @@ class CurrencyApiService {
             }
             return currencies
         } catch (e: Exception) {
+            // TODO FIX THIS SLOP!
             val currentSpan = Span.current()
             if (currentSpan.isRecording) {
                 currentSpan.setAttribute("app.operation.type", "fetch_currencies")

@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -47,8 +49,10 @@ import io.opentelemetry.android.demo.shop.ui.products.ProductDetailViewModel
 import io.opentelemetry.android.demo.theme.DemoAppTheme
 import io.opentelemetry.api.common.AttributeKey.doubleKey
 import io.opentelemetry.api.common.AttributeKey.stringKey
-import android.util.Log
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import io.honeycomb.opentelemetry.android.compose.HoneycombInstrumentedComposable
 import io.opentelemetry.context.Context
 import io.opentelemetry.extension.kotlin.asContextElement
@@ -77,6 +81,8 @@ fun AstronomyShopScreen() {
         val productListViewModel: ProductListViewModel = viewModel()
         val productDetailViewModel: ProductDetailViewModel = viewModel()
         val coroutineScope = rememberCoroutineScope()
+        val snackbarHostState = remember { SnackbarHostState() }
+        var isPlacingOrder by remember { mutableStateOf(false) }
 
         DemoAppTheme {
             Surface(
@@ -84,6 +90,7 @@ fun AstronomyShopScreen() {
                 color = MaterialTheme.colorScheme.background
             ) {
                 Scaffold(
+                    snackbarHost = { SnackbarHost(snackbarHostState) },
                     bottomBar = {
                         BottomNavigationBar(
                             items = listOf(
@@ -152,18 +159,22 @@ fun AstronomyShopScreen() {
                             InfoScreen(
                                 onPlaceOrderClick = {
                                     coroutineScope.launch {
+                                        isPlacingOrder = true
                                         placeOrder(
+                                            snackbarHostState = snackbarHostState,
                                             astronomyShopNavController = astronomyShopNavController,
                                             cartViewModel = cartViewModel,
                                             checkoutInfoViewModel = checkoutInfoViewModel,
                                             checkoutApiService = checkoutApiService,
+                                            onComplete = { isPlacingOrder = false }
                                         )
                                     }
                                 },
                                 upPress = { astronomyShopNavController.upPress() },
                                 checkoutInfoViewModel = checkoutInfoViewModel,
                                 cartViewModel = cartViewModel,
-                                currencyViewModel = currencyViewModel
+                                currencyViewModel = currencyViewModel,
+                                isPlacingOrder = isPlacingOrder
                             )
                         }
                         composable(MainDestinations.CHECKOUT_CONFIRMATION_ROUTE) {
@@ -180,19 +191,25 @@ fun AstronomyShopScreen() {
 }
 
 private suspend fun placeOrder(
+    snackbarHostState: SnackbarHostState,
     astronomyShopNavController: InstrumentedAstronomyShopNavController,
     cartViewModel: CartViewModel,
     checkoutInfoViewModel: CheckoutInfoViewModel,
     checkoutApiService: CheckoutApiService,
+    onComplete: () -> Unit
 ){
     try {
         val checkoutResponse = checkoutApiService.placeOrder(cartViewModel, checkoutInfoViewModel)
         checkoutInfoViewModel.updateCheckoutResponse(checkoutResponse)
         cartViewModel.clearCart()
         astronomyShopNavController.navigateToCheckoutConfirmation()
-    } catch (e: Exception) {
-        // TODO alert the user!
-        Log.e("CheckoutApiService", "Failed to place order: ${e.message}", e)
+    } catch (_: Exception) {
+        snackbarHostState.showSnackbar(
+            message = "❌ Failed to place order. Please try again.",
+            withDismissAction = true
+        )
+    } finally {
+        onComplete()
     }
 
 }

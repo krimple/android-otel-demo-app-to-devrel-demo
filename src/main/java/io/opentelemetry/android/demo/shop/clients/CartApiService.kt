@@ -1,7 +1,6 @@
 package io.opentelemetry.android.demo.shop.clients
 
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.model.*
 import io.opentelemetry.android.demo.shop.session.SessionManager
@@ -9,7 +8,6 @@ import io.opentelemetry.api.trace.StatusCode
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import android.util.Log
 import java.io.IOException
 
 class CartApiService {
@@ -45,7 +43,14 @@ class CartApiService {
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
-            span?.recordException(e)
+            if (OtelDemoApplication.rum !== null) {
+                OtelDemoApplication.logException(
+                    OtelDemoApplication.rum!!,
+                    e,
+                    null,
+                    Thread.currentThread()
+                )
+            }
             throw e
         } finally {
             span?.end()
@@ -80,12 +85,26 @@ class CartApiService {
                 ServerCart(emptyList())
             } else {
                 span?.setStatus(StatusCode.ERROR)
-                span?.recordException(e)
+                if (OtelDemoApplication.rum !== null) {
+                    OtelDemoApplication.logException(
+                        OtelDemoApplication.rum!!,
+                        e,
+                        null,
+                        Thread.currentThread()
+                    )
+                }
                 throw e
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
-            span?.recordException(e)
+            if (OtelDemoApplication.rum !== null) {
+                OtelDemoApplication.logException(
+                    OtelDemoApplication.rum!!,
+                    e,
+                    null,
+                    Thread.currentThread()
+                )
+            }
             throw e
         } finally {
             span?.end()
@@ -110,7 +129,14 @@ class CartApiService {
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
-            span?.recordException(e)
+            if (OtelDemoApplication.rum !== null) {
+                OtelDemoApplication.logException(
+                    OtelDemoApplication.rum!!,
+                    e,
+                    null,
+                    Thread.currentThread()
+                )
+            }
             throw e
         } finally {
             span?.end()

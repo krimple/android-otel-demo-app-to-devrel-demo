@@ -7,6 +7,10 @@ to observe app and user behavior.
 This is very much a work in progress. See the `OtelDemoApplication.kt` for 
 a quick and dirty example of how to get the agent initialized.
 
+## Failure scenarios
+
+* Use the special TAU currency- that's TauridCoin -  (👽) (which doesn't exist, and will fail the currency check
+## AI Wrote the stuff below... be wary until I edit it...
 ## Features
 
 The OpenTelemetry Android Demo App currently supports the following features:

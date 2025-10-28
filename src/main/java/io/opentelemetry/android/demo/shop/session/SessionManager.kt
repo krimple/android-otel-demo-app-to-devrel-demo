@@ -46,7 +46,6 @@ class SessionManager private constructor() {
             span?.setAttribute("app.temp.session.id", newSessionId)
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
-            span?.recordException(e)
             throw e
         } finally {
             span?.end()

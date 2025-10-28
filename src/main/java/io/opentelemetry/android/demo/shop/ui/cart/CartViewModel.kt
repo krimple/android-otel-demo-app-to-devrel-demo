@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import io.opentelemetry.android.demo.OtelDemoApplication
+import io.opentelemetry.android.demo.OtelDemoApplication.Companion.rum
 import io.opentelemetry.api.trace.StatusCode
 
 data class CartItem(
@@ -85,7 +86,7 @@ class CartViewModel(
                 )
                 
                 span?.setStatus(StatusCode.ERROR)
-                span?.recordException(e)
+                OtelDemoApplication.logException(rum, e, null, Thread.currentThread())
             } finally {
                 span?.end()
             }
@@ -122,8 +123,20 @@ class CartViewModel(
                 val totalExplorascopes = currentExplorascopes + quantity
                 
                 if (totalExplorascopes == 10) {
-                    span?.setAttribute("app.demo.trigger", "crash")
+                    // mark the span in error (for Honeycomb)
+                    span?.setStatus(StatusCode.ERROR)
+                    // create an exception and send to a Honeycomb trace-participating log message
+                    var exception = Exception("The application crashed - unknown error.");
+                    if (OtelDemoApplication.rum != null) {
+                        OtelDemoApplication.logException(
+                            OtelDemoApplication.rum!!,
+                            exception,
+                            null,
+                            Thread.currentThread())
+                    }
+                    throw exception;
                 } else if (totalExplorascopes == 9) {
+                    // TODO - more interesting hang scenario with backend delay
                     span?.setAttribute("app.demo.trigger", "hang")
                 }
                 
@@ -167,7 +180,6 @@ class CartViewModel(
                 )
                 
                 span?.setStatus(StatusCode.ERROR)
-                span?.recordException(e)
             } finally {
                 span?.end()
             }
@@ -221,7 +233,6 @@ class CartViewModel(
                 )
                 
                 span?.setStatus(StatusCode.ERROR)
-                span?.recordException(e)
             } finally {
                 span?.end()
             }
