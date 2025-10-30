@@ -15,9 +15,8 @@ class CartApiService {
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
     }
 
-    private val sessionManager = SessionManager.getInstance()
-
     suspend fun addItem(productId: String, quantity: Int) {
+        val sessionManager = SessionManager.getInstance()
         val tracer = OtelDemoApplication.getTracer()
         val span = tracer?.spanBuilder("CartApiService.addItem")
             ?.setAttribute("app.product.id", productId)
@@ -38,8 +37,7 @@ class CartApiService {
                     .post(requestBody.toRequestBody(JSON_MEDIA_TYPE))
                     .build()
 
-                val baggageHeaders = mapOf("Baggage" to "session.id=${sessionManager.currentSessionId}")
-                FetchHelpers.executeRequestWithBaggage(request, baggageHeaders)
+                FetchHelpers.executeRequest(request)
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
@@ -57,12 +55,15 @@ class CartApiService {
         }
     }
 
-    suspend fun getCart(): ServerCart {
+    suspend fun getCart(): ServerCart? {
+        val sessionManager = SessionManager.getInstance()
         val tracer = OtelDemoApplication.getTracer()
         val span = tracer?.spanBuilder("CartApiService.getCart")
             ?.startSpan()
 
-        return try {
+        var serverCart: ServerCart? = null
+
+        try {
             span?.makeCurrent().use {
                 val cartUrl = "${OtelDemoApplication.apiEndpoint}/cart?sessionId=${sessionManager.currentSessionId}"
                 val request = Request.Builder()
@@ -70,13 +71,12 @@ class CartApiService {
                     .get()
                     .build()
 
-                val baggageHeaders = mapOf("Baggage" to "session.id=${sessionManager.currentSessionId}")
-                val bodyText = FetchHelpers.executeRequestWithBaggage(request, baggageHeaders)
+                val bodyText = FetchHelpers.executeRequest(request)
                 
-                val serverCart = Gson().fromJson(bodyText, ServerCart::class.java)
+                serverCart = Gson().fromJson(bodyText, ServerCart::class.java)
                 span?.setAttribute("app.cart.items.count", serverCart.items.size.toLong())
                 span?.setAttribute("app.cart.total.items", serverCart.getTotalItemCount().toLong())
-                serverCart
+                return serverCart
             }
         } catch (e: IOException) {
             // Handle 404 as empty cart (new session)
@@ -109,9 +109,11 @@ class CartApiService {
         } finally {
             span?.end()
         }
+        return serverCart
     }
 
     suspend fun emptyCart() {
+        val sessionManager = SessionManager.getInstance()
         val tracer = OtelDemoApplication.getTracer()
         val span = tracer?.spanBuilder("CartApiService.emptyCart")
             ?.startSpan()
@@ -125,7 +127,7 @@ class CartApiService {
                     .build()
 
                 val baggageHeaders = mapOf("Baggage" to "session.id=${sessionManager.currentSessionId}")
-                FetchHelpers.executeRequestWithBaggage(request, baggageHeaders)
+                FetchHelpers.executeRequest(request)
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)

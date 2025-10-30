@@ -1,10 +1,7 @@
 package io.opentelemetry.android.demo.shop.clients
 
-import io.opentelemetry.android.demo.shop.model.*
 import io.opentelemetry.android.demo.shop.ui.cart.CartViewModel
 import io.opentelemetry.android.demo.shop.ui.cart.CheckoutInfoViewModel
-import io.opentelemetry.android.demo.shop.ui.cart.PaymentInfo
-import io.opentelemetry.android.demo.shop.ui.cart.ShippingInfo
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.Assert.*
@@ -62,7 +59,7 @@ class CheckoutApiServiceTest {
         
         try {
             // This will fail due to network call, but we can verify the structure
-            checkoutApiService.placeOrder(cartViewModel, checkoutInfoViewModel)
+            checkoutApiService.placeOrder(checkoutInfoViewModel)
             fail("Expected exception due to network call")
         } catch (e: Exception) {
             // Expected - we're making a real network call
@@ -80,10 +77,9 @@ class CheckoutApiServiceTest {
         // Look for a method that has CartViewModel and CheckoutInfoViewModel in its parameters
         val correctMethod = methods.find { method ->
             val paramTypes = method.parameterTypes.map { it.simpleName }
-            paramTypes.any { it.contains("CartViewModel") } &&
             paramTypes.any { it.contains("CheckoutInfoViewModel") }
         }
-        assertNotNull("placeOrder should have correct signature with CartViewModel and CheckoutInfoViewModel", correctMethod)
+        assertNotNull("placeOrder should have correct signature with CheckoutInfoViewModel", correctMethod)
     }
 
     @Test

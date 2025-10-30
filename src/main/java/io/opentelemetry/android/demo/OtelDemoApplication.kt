@@ -31,19 +31,21 @@ import io.opentelemetry.sdk.OpenTelemetrySdk
 import io.opentelemetry.semconv.ExceptionAttributes.EXCEPTION_MESSAGE
 import io.opentelemetry.semconv.ExceptionAttributes.EXCEPTION_STACKTRACE
 import io.opentelemetry.semconv.ExceptionAttributes.EXCEPTION_TYPE
-import io.opentelemetry.semconv.incubating.EventIncubatingAttributes.EVENT_NAME
 import io.opentelemetry.semconv.incubating.ThreadIncubatingAttributes.THREAD_ID
 import io.opentelemetry.semconv.incubating.ThreadIncubatingAttributes.THREAD_NAME
 import okhttp3.OkHttpClient
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.time.Instant.now
+import kotlin.time.Duration.Companion.seconds;
 import java.util.concurrent.TimeUnit
 
 const val TAG = "otel.demo"
 
 class OtelDemoApplication : Application() {
     override fun onCreate() {
+
+        val timeoutDuration = 0.seconds
 
         super.onCreate()
         INSTANCE = this
@@ -75,6 +77,7 @@ class OtelDemoApplication : Application() {
             .setLogsProtocol(OtlpProtocol.HTTP_PROTOBUF)
             .setServiceName(serviceName)
             .setServiceVersion("1.0.2")
+            .setTimeout(timeoutDuration)
             .setDebug(true)
             .build()
 
@@ -129,6 +132,7 @@ class OtelDemoApplication : Application() {
             attributes: Attributes? = null,
             thread: Thread? = null,
         ) {
+            val crashTime = now();
             // TODO: It would be nice to include the common RuntimeDetailsExtractor, in order to
             // augment the event with additional metadata, such as memory usage and battery percentage.
             // However, that might require changing this into an entire separate instrumentation
@@ -169,6 +173,9 @@ class OtelDemoApplication : Application() {
                 .put(AttributeKey.stringArrayKey("exception.structured_stacktrace.methods"), methods)
                 .put(AttributeKey.longArrayKey("exception.structured_stacktrace.lines"), lines)
                 .put(AttributeKey.stringArrayKey("exception.structured_stacktrace.source_files"), sourceFiles)
+                // TODO once we upgrade our OTel library we need to switch
+                // to the setEventName builder attribute
+                .put(AttributeKey.stringKey("event.name"), "device.crash")
 
             thread?.let {
                 attributesBuilder
@@ -176,12 +183,10 @@ class OtelDemoApplication : Application() {
                     .put(THREAD_NAME, it.name)
             }
 
-            attributesBuilder.put(EVENT_NAME, "device.crash")
             logger
                 .logRecordBuilder()
                 // try setting timestamp
-                .setTimestamp(now())
-                .setObservedTimestamp(now())
+                .setTimestamp(crashTime)
                 .setAllAttributes(attributesBuilder.build())
                 .emit()
         }

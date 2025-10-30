@@ -73,8 +73,7 @@ class ShippingApiService {
                     .post(requestBody.toRequestBody(JSON_MEDIA_TYPE))
                     .build()
 
-                val baggageHeaders = mapOf("Baggage" to "session.id=${sessionManager.currentSessionId}")
-                val responseBody = FetchHelpers.executeRequestWithBaggage(request, baggageHeaders)
+                val responseBody = FetchHelpers.executeRequest(request)
                 val checkoutResponse = Gson().fromJson(responseBody, CheckoutResponse::class.java)
                 
                 span?.setAttribute("app.shipping.cost", checkoutResponse.shippingCost.toDouble())

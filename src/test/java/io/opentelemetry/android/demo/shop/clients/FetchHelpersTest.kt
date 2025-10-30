@@ -1,5 +1,6 @@
 package io.opentelemetry.android.demo.shop.clients
 
+import io.opentelemetry.android.demo.shop.clients.FetchHelpers.Companion.executeRequest
 import io.opentelemetry.api.GlobalOpenTelemetry
 import io.opentelemetry.api.trace.Tracer
 import io.opentelemetry.api.trace.SpanKind
@@ -41,20 +42,16 @@ class FetchHelpersTest {
     }
 
     // Create a testable version of the executeRequestWithBaggage method
-    private suspend fun executeRequestWithBaggageTest(
+    private suspend fun executeRequestTest(
         request: Request, 
-        baggageHeaders: Map<String, String>,
         client: OkHttpClient,
         tracer: Tracer?
     ): String = suspendCancellableCoroutine<String> { cont ->
         
-        val span = tracer?.spanBuilder("executeRequestWithBaggage")?.setSpanKind(SpanKind.CLIENT)?.startSpan()
+        val span = tracer?.spanBuilder("executeRequest")?.setSpanKind(SpanKind.CLIENT)?.startSpan()
 
         // Add baggage headers to the request
         val requestBuilder = request.newBuilder()
-        baggageHeaders.forEach { (key, value) ->
-            requestBuilder.addHeader(key, value)
-        }
         val tracedRequest = requestBuilder.build()
 
         val call = client.newCall(tracedRequest)
@@ -88,7 +85,7 @@ class FetchHelpersTest {
     }
 
     @Test
-    fun `executeRequestWithBaggage adds trace headers to request`() = runTest {
+    fun `executeRequest adds trace headers to request`() = runTest {
         // Arrange
         val mockResponse = MockResponse()
             .setResponseCode(200)
@@ -102,8 +99,7 @@ class FetchHelpersTest {
 
         // Act
         try {
-            val baggageHeaders = mapOf("Baggage" to "session.id=test-session")
-            executeRequestWithBaggageTest(request, baggageHeaders, httpClient, tracer)
+            executeRequest(request)
         } catch (e: Exception) {
             // We expect this might fail due to JSON parsing, but that's ok
             // We just want to verify the headers were sent
@@ -168,7 +164,7 @@ class FetchHelpersTest {
 
         // Act
         val baggageHeaders = mapOf("Baggage" to "session.id=test-session")
-        val result = executeRequestWithBaggageTest(request, baggageHeaders, httpClient, tracer)
+        val result = executeRequest(request)
 
         // Assert
         assertEquals(expectedBody, result)
@@ -190,7 +186,7 @@ class FetchHelpersTest {
         // Act & Assert
         try {
             val baggageHeaders = mapOf("Baggage" to "session.id=test-session")
-            executeRequestWithBaggageTest(request, baggageHeaders, httpClient, tracer)
+            executeRequest(request)
             fail("Expected exception for 404 status")
         } catch (e: Exception) {
             assertTrue("Exception message should contain status code", 
@@ -209,7 +205,7 @@ class FetchHelpersTest {
         // Act & Assert
         try {
             val baggageHeaders = mapOf("Baggage" to "session.id=test-session")
-            executeRequestWithBaggageTest(request, baggageHeaders, httpClient, tracer)
+            executeRequest(request)
             fail("Expected exception for network failure")
         } catch (e: Exception) {
             // Network failures should throw IOException with connection-related messages

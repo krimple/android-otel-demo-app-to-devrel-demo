@@ -199,7 +199,7 @@ private suspend fun placeOrder(
     onComplete: () -> Unit
 ){
     try {
-        val checkoutResponse = checkoutApiService.placeOrder(cartViewModel, checkoutInfoViewModel)
+        val checkoutResponse = checkoutApiService.placeOrder(checkoutInfoViewModel)
         checkoutInfoViewModel.updateCheckoutResponse(checkoutResponse)
         cartViewModel.clearCart()
         astronomyShopNavController.navigateToCheckoutConfirmation()

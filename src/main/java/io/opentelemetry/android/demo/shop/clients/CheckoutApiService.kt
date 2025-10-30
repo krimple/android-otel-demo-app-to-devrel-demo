@@ -10,14 +10,10 @@ import io.opentelemetry.android.demo.shop.session.SessionManager
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.util.UUID
 import io.opentelemetry.api.common.AttributeKey.doubleKey
 import io.opentelemetry.api.common.AttributeKey.longKey
 import io.opentelemetry.api.common.AttributeKey.stringKey
 import io.opentelemetry.api.trace.StatusCode
-import android.util.Log
-import io.honeycomb.opentelemetry.android.Honeycomb
-import io.honeycomb.opentelemetry.android.compose.LocalOpenTelemetryRum
 
 class CheckoutApiService(
 ) {
@@ -28,7 +24,6 @@ class CheckoutApiService(
     private val sessionManager = SessionManager.getInstance()
 
     suspend fun placeOrder(
-        cartViewModel: CartViewModel,
         checkoutInfoViewModel: CheckoutInfoViewModel,
     ): CheckoutResponse {
         val currencyCode = OtelDemoApplication.getInstance().getSharedPreferences("currency_prefs", MODE_PRIVATE)
@@ -66,9 +61,7 @@ class CheckoutApiService(
                     .post(requestBody.toRequestBody(JSON_MEDIA_TYPE))
                     .build()
 
-                val baggageHeaders = mapOf("Baggage" to "session.id=${sessionManager.currentSessionId}")
-
-                val responseBody = FetchHelpers.executeRequestWithBaggage(request, baggageHeaders)
+                val responseBody = FetchHelpers.executeRequest(request)
                 val checkoutResponse = Gson().fromJson(responseBody, CheckoutResponse::class.java)
 
                 // Add response attributes
@@ -77,23 +70,17 @@ class CheckoutApiService(
                 span?.setAttribute(doubleKey("app.checkout.response.shipping_cost"), checkoutResponse.shippingCost.toDouble())
                 span?.setAttribute(stringKey("app.checkout.response.shipping_cost.currency"), checkoutResponse.shippingCost.currencyCode)
                 span?.setAttribute(longKey("app.checkout.response.items_count"), checkoutResponse.items.size.toLong())
+                span?.setAttribute(stringKey("app.checkout.response.product_ids"), checkoutResponse.items.map{it.item.productId}.joinToString(","))
+                span?.setAttribute(stringKey("app.checkout.response.product_qtys"), checkoutResponse.items.map{it.item.quantity}.joinToString(","))
+                span?.setAttribute(stringKey("app.checkout.response.item_costs"), checkoutResponse.items.map{it.item.quantity}.joinToString(","))
 
-                var totalCost = 0.0
-                checkoutResponse.items.forEachIndexed { index, item ->
-                    span?.setAttribute(stringKey("app.checkout.response.item_${index}.product_id"), item.item.productId)
-                    span?.setAttribute(longKey("app.checkout.response.item_${index}.quantity"), item.item.quantity.toLong())
-                    span?.setAttribute(doubleKey("app.checkout.response.item_${index}.cost"), item.cost.toDouble())
-                    span?.setAttribute(stringKey("app.checkout.response.item_${index}.cost.currency"), item.cost.currencyCode)
-                    totalCost += item.cost.toDouble()
-                }
+                var totalCost = checkoutResponse.items.sumOf { it.cost.toDouble() }
 
                 span?.setAttribute(doubleKey("app.checkout.response.total_item_cost"), totalCost)
                 span?.setAttribute(
                     doubleKey("app.checkout.response.order.total"),
                     totalCost + checkoutResponse.shippingCost.toDouble())
 
-                // Reset session after successful checkout
-                sessionManager.resetSession()
                 span?.setAttribute("app.checkout.session.reset", true)
 
                 // return this response
@@ -103,11 +90,22 @@ class CheckoutApiService(
                 // was reported there. This is just an errored span.
                 span?.setStatus(StatusCode.ERROR, "Failed to place order");
 
+                // add log record to report exception
+                OtelDemoApplication.logException(
+                    OtelDemoApplication.rum!!,
+                    e,
+                    null,
+                    Thread.currentThread()
+                )
                 throw e
             } finally {
                 span?.end()
             }
         }
+
+        // once we checkout and end the span
+        // (and don't throw out of here) we are done with the session
+        sessionManager.resetSession()
     }
 
     private fun buildCheckoutRequest(

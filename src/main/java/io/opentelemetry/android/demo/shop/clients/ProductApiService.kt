@@ -10,7 +10,6 @@ import okhttp3.Request
 
 class ProductApiService(
 ) {
-    private val sessionManager = SessionManager.getInstance()
     suspend fun fetchProducts(currencyCode: String = "USD"): List<Product> {
         val tracer = OtelDemoApplication.getTracer()
 
@@ -25,22 +24,21 @@ class ProductApiService(
                     .url(productsUrl)
                     .get().build()
 
-                val baggageHeaders = mapOf("Baggage" to "session.id=${sessionManager.currentSessionId}")
-                val bodyText = FetchHelpers.executeRequestWithBaggage(request, baggageHeaders)
+                val bodyText = FetchHelpers.executeRequest(request)
                 val listType = object : TypeToken<List<Product>>() {}.type
+
                 // implict return is last statement in method in Kotlin so it is for the try
                 Gson().fromJson<List<Product>>(bodyText, listType)
             }
         } catch (e: Exception) {
-            span?.setStatus(StatusCode.ERROR)
-            if (OtelDemoApplication.rum !== null) {
-                OtelDemoApplication.logException(
-                    OtelDemoApplication.rum!!,
-                    e,
-                    null,
-                    Thread.currentThread()
-                )
-            }
+            span?.setStatus(StatusCode.ERROR, "Failed to fetch products");
+
+            OtelDemoApplication.logException(
+                OtelDemoApplication.rum!!,
+                e,
+                null,
+                Thread.currentThread()
+            )
             throw e
         } finally {
             span?.end()
@@ -63,8 +61,7 @@ class ProductApiService(
                     .url(productUrl)
                     .get().build()
 
-                val baggageHeaders = mapOf("Baggage" to "session.id=${sessionManager.currentSessionId}")
-                val bodyText = FetchHelpers.executeRequestWithBaggage(request, baggageHeaders)
+                val bodyText = FetchHelpers.executeRequest(request)
                 Gson().fromJson(bodyText, Product::class.java)
             }
         } catch (e: Exception) {
