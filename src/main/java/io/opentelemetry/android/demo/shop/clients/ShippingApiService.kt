@@ -27,7 +27,7 @@ class ShippingApiService {
     ): Money {
         val tracer = OtelDemoApplication.getTracer()
 
-        val span = tracer?.spanBuilder("ShippingAPIService.getShippingCost")
+        val span = tracer?.spanBuilder("shipping_api_service.get_shipping_cost")
             ?.setParent(parentContext)
             ?.setAttribute("app.user.currency", currencyCode)
             ?.setAttribute("app.cart.items.count", cartViewModel.cartItems.value.size.toLong())

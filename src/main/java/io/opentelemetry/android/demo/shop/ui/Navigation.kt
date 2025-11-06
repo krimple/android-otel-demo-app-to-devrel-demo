@@ -77,10 +77,8 @@ class InstrumentedAstronomyShopNavController(
     fun navigateToProductDetail(productId: String) {
         // Navigation events are discrete user interactions - create root span
         val tracer = OtelDemoApplication.getTracer()
-        tracer?.spanBuilder("user.navigate")
-            ?.setAttribute("app.screen.destination", "product_detail")
+        tracer?.spanBuilder("navigation.product_detail")
             ?.setAttribute("app.product.id", productId)
-            ?.setAttribute("app.interaction.type", "tap")
             ?.startSpan()
             ?.end()  // End immediately - this is a discrete event, not a lasting operation
         
@@ -90,9 +88,7 @@ class InstrumentedAstronomyShopNavController(
     fun navigateToCheckoutInfo() {
         // Navigation events are discrete user interactions - create root span
         val tracer = OtelDemoApplication.getTracer()
-        tracer?.spanBuilder("user.navigate")
-            ?.setAttribute("app.screen.destination", "checkout_info")
-            ?.setAttribute("app.interaction.type", "tap")
+        tracer?.spanBuilder("navigation.checkout_info")
             ?.startSpan()
             ?.end()  // End immediately - this is a discrete event
         
@@ -102,9 +98,7 @@ class InstrumentedAstronomyShopNavController(
     fun navigateToCheckoutConfirmation() {
         // Navigation events are discrete user interactions - create root span
         val tracer = OtelDemoApplication.getTracer()
-        tracer?.spanBuilder("user.navigate")
-            ?.setAttribute("app.screen.destination", "checkout_confirmation")
-            ?.setAttribute("app.interaction.type", "tap")
+        tracer?.spanBuilder("navigation.checkout_confirmation")
             ?.startSpan()
             ?.end()  // End immediately - this is a discrete event
         

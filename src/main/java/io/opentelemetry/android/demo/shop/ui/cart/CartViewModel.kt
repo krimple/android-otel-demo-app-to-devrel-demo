@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.OtelDemoApplication.Companion.rum
 import io.opentelemetry.api.trace.StatusCode
+import kotlinx.coroutines.Dispatchers
 
 data class CartItem(
     val product: Product,
@@ -49,12 +50,11 @@ class CartViewModel(
     private fun loadCart(currencyCode: String = "USD") {
         // User-initiated screen load - create root span
         val tracer = OtelDemoApplication.getTracer()
-        val span = tracer?.spanBuilder("screen.load_cart")
-            ?.setAttribute("app.screen.name", "cart")
+        val span = tracer?.spanBuilder("cart_vm.load_cart")
             ?.setAttribute("app.user.currency", currencyCode)
             ?.startSpan()
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
 
             try {
@@ -96,7 +96,7 @@ class CartViewModel(
     fun addProduct(product: Product, quantity: Int, currencyCode: String = "USD") {
         // User-initiated cart action - create root span
         val tracer = OtelDemoApplication.getTracer()
-        val span = tracer?.spanBuilder("user.add_to_cart")
+        val span = tracer?.spanBuilder("cart_vm.add_to_cart")
             ?.setAttribute("app.product.id", product.id)
             ?.setAttribute("app.product.name", product.name)
             ?.setAttribute("app.product.price.usd", product.priceValue())
@@ -104,7 +104,7 @@ class CartViewModel(
             ?.setAttribute("app.user.currency", currencyCode)
             ?.startSpan()
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             // Prevent concurrent executions of addProduct
             if (_uiState.value.isLoading) {
                 span?.setAttribute("app.operation.status", "skipped_already_loading")
@@ -209,7 +209,7 @@ class CartViewModel(
 
     fun clearCart(currencyCode: String = "USD") {
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(isLoading = true)
 
             try {

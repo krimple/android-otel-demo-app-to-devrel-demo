@@ -14,6 +14,7 @@ package io.opentelemetry.android.demo
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -26,7 +27,7 @@ class DemoViewModel : ViewModel() {
         // Update session ID on initialization
         updateSession()
         
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             while (true) {
                 delay(5000)
                 // TODO: Do some work here maybe

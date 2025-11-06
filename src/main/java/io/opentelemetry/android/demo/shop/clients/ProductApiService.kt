@@ -13,9 +13,8 @@ class ProductApiService(
     suspend fun fetchProducts(currencyCode: String = "USD"): List<Product> {
         val tracer = OtelDemoApplication.getTracer()
 
-        val span = tracer?.spanBuilder("ProductAPIService.fetchProducts")
+        val span = tracer?.spanBuilder("product_api_service.fetch_products")
             ?.setAttribute("app.user.currency", currencyCode)
-            ?.setAttribute("app.operation.type", "fetch_products")
             ?.startSpan()
         return try {
             span?.makeCurrent().use {
@@ -48,10 +47,9 @@ class ProductApiService(
     suspend fun fetchProduct(productId: String, currencyCode: String = "USD"): Product {
         val tracer = OtelDemoApplication.getTracer()
 
-        val span = tracer?.spanBuilder("ProductAPIService.fetchProduct")
+        val span = tracer?.spanBuilder("product_api_service.fetch_product")
             ?.setAttribute("app.product.id", productId)
             ?.setAttribute("app.user.currency", currencyCode)
-            ?.setAttribute("app.operation.type", "fetch_product")
             ?.startSpan()
 
         return try {
