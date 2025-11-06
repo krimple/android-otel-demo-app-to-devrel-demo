@@ -18,7 +18,7 @@ class CartApiService {
     suspend fun addItem(productId: String, quantity: Int) {
         val sessionManager = SessionManager.getInstance()
         val tracer = OtelDemoApplication.getTracer()
-        val span = tracer?.spanBuilder("CartApiService.addItem")
+        val span = tracer?.spanBuilder("cart_api_service.addItem")
             ?.setAttribute("app.product.id", productId)
             ?.setAttribute("app.cart.item.quantity", quantity.toLong())
             ?.startSpan()
@@ -58,7 +58,7 @@ class CartApiService {
     suspend fun getCart(): ServerCart? {
         val sessionManager = SessionManager.getInstance()
         val tracer = OtelDemoApplication.getTracer()
-        val span = tracer?.spanBuilder("CartApiService.getCart")
+        val span = tracer?.spanBuilder("cart_api_service.get_cart")
             ?.startSpan()
 
         var serverCart: ServerCart? = null
@@ -115,7 +115,7 @@ class CartApiService {
     suspend fun emptyCart() {
         val sessionManager = SessionManager.getInstance()
         val tracer = OtelDemoApplication.getTracer()
-        val span = tracer?.spanBuilder("CartApiService.emptyCart")
+        val span = tracer?.spanBuilder("cart_api_service.empty_cart")
             ?.startSpan()
 
         try {

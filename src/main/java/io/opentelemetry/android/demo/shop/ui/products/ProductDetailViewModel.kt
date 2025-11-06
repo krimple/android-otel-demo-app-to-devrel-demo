@@ -6,6 +6,7 @@ import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.clients.ProductApiService
 import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.api.trace.StatusCode
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,13 +28,12 @@ class ProductDetailViewModel(
     fun loadProduct(productId: String, currencyCode: String = "USD") {
         // User-initiated screen load - create root span
         val tracer = OtelDemoApplication.getTracer()
-        val span = tracer?.spanBuilder("screen.load_product_detail")
-            ?.setAttribute("app.screen.name", "product_detail")
+        val span = tracer?.spanBuilder("product_vm.load_product_detail")
             ?.setAttribute("app.product.id", productId)
             ?.setAttribute("app.user.currency", currencyCode)
             ?.startSpan()
         
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
 
             try {

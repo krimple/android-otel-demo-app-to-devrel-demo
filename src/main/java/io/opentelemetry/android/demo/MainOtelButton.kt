@@ -53,11 +53,10 @@ fun MainOtelButton(icon: Painter,
 fun generateClickEvent(counter: LongCounter?) {
     val tracer = OtelDemoApplication.getTracer()
     counter?.add(1)
-    val span = tracer?.spanBuilder("logo.clicked")
+    val span = tracer?.spanBuilder("main_otel_button.logo.clicked")
         ?.setSpanKind(SpanKind.INTERNAL)
         ?.setAttribute("app.ui.button.name", "otel_demo_button")
         ?.setAttribute("app.interaction.type", "tap")
-        ?.setAttribute("app.screen.name", "main_menu")
         ?.setAttribute("app.operation.type", "ui_interaction")
         ?.startSpan()
     span?.end()

@@ -81,6 +81,7 @@ class OtelDemoApplication : Application() {
             .setDebug(true)
             .build()
 
+
         try {
             rum = Honeycomb.configure(this, options)
 
@@ -120,10 +121,6 @@ class OtelDemoApplication : Application() {
 
         fun counter(name: String): LongCounter? {
             return rum?.openTelemetry?.getMeter("otel.demo.app")?.counterBuilder(name)?.build()
-        }
-
-        fun getHttpClient(): OkHttpClient {
-            return httpClient ?: throw IllegalStateException("OkHttpClient not initialized")
         }
 
         fun logException(

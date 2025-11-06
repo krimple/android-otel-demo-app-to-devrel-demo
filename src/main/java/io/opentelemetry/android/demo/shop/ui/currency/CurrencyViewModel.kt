@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.api.trace.Span
+import kotlinx.coroutines.Dispatchers
 
 class CurrencyViewModel() : ViewModel() {
     private val currencyApiService = CurrencyApiService()
@@ -67,11 +68,12 @@ class CurrencyViewModel() : ViewModel() {
             return
         }
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _isLoading.value = true
             _error.value = null
 
             try {
+                // TODO - could this be a problem with our traces?
                 // No outer span - just let the API call create its own single-span trace
                 val currencies = currencyApiService.fetchCurrencies()
                 // HACK - add currency that doesn't exist
@@ -95,7 +97,6 @@ class CurrencyViewModel() : ViewModel() {
             // Add attributes to current span if available
             val currentSpan = Span.current()
             if (currentSpan.isRecording) {
-                currentSpan.setAttribute("app.view.model", "CurrencyViewModel")
                 currentSpan.setAttribute("app.user.currency", currency)
             }
 
@@ -104,7 +105,6 @@ class CurrencyViewModel() : ViewModel() {
             // Add rejection context to current span if available
             val currentSpan = Span.current()
             if (currentSpan.isRecording) {
-                currentSpan.setAttribute("app.view.model", "CurrencyViewModel")
                 currentSpan.setAttribute("app.user.currency", currency)
                 currentSpan.setStatus(StatusCode.ERROR, "no currency found")
             }

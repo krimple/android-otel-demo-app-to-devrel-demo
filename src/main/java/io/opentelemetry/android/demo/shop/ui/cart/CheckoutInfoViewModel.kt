@@ -12,6 +12,8 @@ import kotlinx.coroutines.launch
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.OtelDemoApplication.Companion.rum
 import io.opentelemetry.api.trace.StatusCode
+import kotlinx.coroutines.Dispatchers
+import okhttp3.Dispatcher
 
 data class ShippingInfo(
     var email: String = "someone@example.com",
@@ -93,9 +95,9 @@ class CheckoutInfoViewModel : ViewModel() {
     private fun calculateShippingCost(cartViewModel: CartViewModel, currencyCode: String = "USD") {
         val tracer = OtelDemoApplication.getTracer()
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             if (!shippingInfo.isComplete() || cartViewModel.cartItems.value.isEmpty()) {
-                val span = tracer?.spanBuilder("skipCalculateShippingCost")
+                val span = tracer?.spanBuilder("checkout_info_vm.skip_shipping")
                     ?.setAttribute("app.shipping.calculation.skipped", true)
                     ?.setAttribute(
                         "app.shipping.calculation.skip.reason",
@@ -108,7 +110,7 @@ class CheckoutInfoViewModel : ViewModel() {
                 shippingCost = null
                 span?.end()
             } else {
-                val span = tracer?.spanBuilder("calculateShippingCost")
+                val span = tracer?.spanBuilder("checkout_info_vm.calculate_shipping")
                     ?.setAttribute("app.user.currency", currencyCode)
                     ?.setAttribute("app.shipping.info.complete", shippingInfo.isComplete())
                     ?.setAttribute(

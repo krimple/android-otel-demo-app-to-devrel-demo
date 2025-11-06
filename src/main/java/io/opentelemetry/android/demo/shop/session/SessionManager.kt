@@ -34,9 +34,8 @@ class SessionManager private constructor() {
      */
     fun resetSession() {
         val tracer = OtelDemoApplication.getTracer()
-        val span = tracer?.spanBuilder("SessionManager.resetSession")
+        val span = tracer?.spanBuilder("session_manager.reset_session")
             ?.setAttribute("app.prev.session.id", _currentSessionId)
-            ?.setAttribute("app.operation.type", "reset_session")
             ?.startSpan()
         
         try {
