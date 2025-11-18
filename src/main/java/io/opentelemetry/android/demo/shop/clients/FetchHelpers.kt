@@ -1,5 +1,6 @@
 package io.opentelemetry.android.demo.shop.clients
 
+import android.icu.util.TimeUnit
 import android.util.Log
 import coil3.network.HttpException
 import io.opentelemetry.android.OpenTelemetryRum
@@ -58,28 +59,6 @@ class FetchHelpers {
     companion object {
         private val TEXT_MAP_SETTER: TextMapSetter<Request.Builder> = OkHttpTextMapSetter();
 
-        fun tracedRequest(original: Request): Request {
-            val okClientBuilder = original.newBuilder()
-            // grab the session id from global rum
-            val sessionId = OtelDemoApplication.rum!!.rumSessionId;
-
-            // build the baggage for session.id
-            val baggage = Baggage
-                .current()
-                .toBuilder()
-                .put("session.id", sessionId)
-                .build();
-
-            val ctxWithBaggage = baggage.storeInContext(Context.current());
-
-            // Inject the current OTel context into HTTP headers
-            GlobalOpenTelemetry.getPropagators()
-                .textMapPropagator
-                .inject(ctxWithBaggage, okClientBuilder, OkHttpTextMapSetter())
-
-            return okClientBuilder.build()
-        }
-
         private fun isBenignCancel(e: IOException): Boolean {
             if (e.message?.contains("Canceled", ignoreCase = true) == true) return true
             if (e.message?.contains("stream was reset: CANCEL", true) == true) return true
@@ -114,7 +93,12 @@ class FetchHelpers {
         suspend fun executeRequest(request: Request): String {
             val okClientBuilder = OkHttpClient.Builder()
             OtelDemoApplication.rum?.let { okClientBuilder.addInterceptor(BaggageInterceptor(it)) }
-            val client = okClientBuilder.build();
+            // add ridiculously long timeouts - because, demo
+            val client = okClientBuilder
+                .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                .callTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                .build()
 
             return suspendCancellableCoroutine { cont ->
                 val callback = object : Callback {
