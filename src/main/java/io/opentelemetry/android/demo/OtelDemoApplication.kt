@@ -37,8 +37,8 @@ import okhttp3.OkHttpClient
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.time.Instant.now
-import kotlin.time.Duration.Companion.seconds;
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.seconds;
 
 const val TAG = "otel.demo"
 
