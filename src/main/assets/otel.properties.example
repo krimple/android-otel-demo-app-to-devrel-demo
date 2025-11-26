@@ -5,5 +5,5 @@
 SERVICE_NAME=android-otel-demo
 
 # Where to point to for sending telemetry - the prod telescope shop of course!
-TELEMETRY_ENDPOINT=Your Telescope Shop collector endpoint here anding in /otlp-http
+TELEMETRY_ENDPOINT=Your Telescope Shop collector endpoint here ending in /otlp-http
 
