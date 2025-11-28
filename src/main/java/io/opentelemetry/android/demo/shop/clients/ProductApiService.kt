@@ -2,7 +2,9 @@ package io.opentelemetry.android.demo.shop.clients
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import io.honeycomb.opentelemetry.android.Honeycomb
 import io.opentelemetry.android.demo.OtelDemoApplication
+import io.opentelemetry.android.demo.OtelDemoApplication.Companion.rum
 import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.android.demo.shop.session.SessionManager
 import io.opentelemetry.api.trace.StatusCode
@@ -31,13 +33,7 @@ class ProductApiService(
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR, "Failed to fetch products");
-
-            OtelDemoApplication.logException(
-                OtelDemoApplication.rum!!,
-                e,
-                null,
-                Thread.currentThread()
-            )
+            rum?.let { Honeycomb.logException(it, e, null, Thread.currentThread()) }
             throw e
         } finally {
             span?.end()

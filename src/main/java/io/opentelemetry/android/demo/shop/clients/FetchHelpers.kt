@@ -3,6 +3,7 @@ package io.opentelemetry.android.demo.shop.clients
 import android.icu.util.TimeUnit
 import android.util.Log
 import coil3.network.HttpException
+import io.honeycomb.opentelemetry.android.Honeycomb
 import io.opentelemetry.android.OpenTelemetryRum
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.api.GlobalOpenTelemetry
@@ -74,7 +75,7 @@ class FetchHelpers {
             }
             val rum = OtelDemoApplication.rum
             if (rum != null) {
-                OtelDemoApplication.logException(
+                Honeycomb.logException(
                     rum,
                     e,
                     Attributes.of(

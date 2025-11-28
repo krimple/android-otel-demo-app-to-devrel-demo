@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.honeycomb.opentelemetry.android.Honeycomb
 import io.opentelemetry.android.demo.shop.clients.ShippingApiService
 import io.opentelemetry.android.demo.shop.model.CheckoutResponse
 import io.opentelemetry.android.demo.shop.model.Money
@@ -138,7 +139,7 @@ class CheckoutInfoViewModel : ViewModel() {
                         hasCalculatedShipping = true
                     } catch (e: Exception) {
                         span?.setStatus(StatusCode.ERROR)
-                        OtelDemoApplication.logException(rum, e, null, Thread.currentThread())
+                        rum?.let { Honeycomb.logException(it, e, null, Thread.currentThread()) }
                         shippingCalculationError = "Failed to calculate shipping: ${e.message}"
                     } finally {
                         isCalculatingShipping = false

@@ -1,7 +1,9 @@
 package io.opentelemetry.android.demo.shop.clients
 
 import com.google.gson.Gson
+import io.honeycomb.opentelemetry.android.Honeycomb
 import io.opentelemetry.android.demo.OtelDemoApplication
+import io.opentelemetry.android.demo.OtelDemoApplication.Companion.rum
 import io.opentelemetry.android.demo.shop.model.*
 import io.opentelemetry.android.demo.shop.session.SessionManager
 import io.opentelemetry.api.trace.StatusCode
@@ -41,14 +43,7 @@ class CartApiService {
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
-            if (OtelDemoApplication.rum !== null) {
-                OtelDemoApplication.logException(
-                    OtelDemoApplication.rum!!,
-                    e,
-                    null,
-                    Thread.currentThread()
-                )
-            }
+            rum?.let { Honeycomb.logException(it, e, null, Thread.currentThread()) }
             throw e
         } finally {
             span?.end()
@@ -85,25 +80,13 @@ class CartApiService {
                 ServerCart(emptyList())
             } else {
                 span?.setStatus(StatusCode.ERROR)
-                if (OtelDemoApplication.rum !== null) {
-                    OtelDemoApplication.logException(
-                        OtelDemoApplication.rum!!,
-                        e,
-                        null,
-                        Thread.currentThread()
-                    )
-                }
+                rum?.let { Honeycomb.logException(it, e, null, Thread.currentThread()) }
                 throw e
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
             if (OtelDemoApplication.rum !== null) {
-                OtelDemoApplication.logException(
-                    OtelDemoApplication.rum!!,
-                    e,
-                    null,
-                    Thread.currentThread()
-                )
+                rum?.let { Honeycomb.logException(it, e, null, Thread.currentThread()) }
             }
             throw e
         } finally {
@@ -131,14 +114,7 @@ class CartApiService {
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
-            if (OtelDemoApplication.rum !== null) {
-                OtelDemoApplication.logException(
-                    OtelDemoApplication.rum!!,
-                    e,
-                    null,
-                    Thread.currentThread()
-                )
-            }
+            rum?.let { Honeycomb.logException(it, e, null, Thread.currentThread()) }
             throw e
         } finally {
             span?.end()

@@ -2,6 +2,7 @@ package io.opentelemetry.android.demo.shop.ui.cart
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.honeycomb.opentelemetry.android.Honeycomb
 import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.android.demo.shop.model.Money
 import io.opentelemetry.android.demo.shop.clients.CartApiService
@@ -86,7 +87,8 @@ class CartViewModel(
                 )
 
                 span?.setStatus(StatusCode.ERROR)
-                OtelDemoApplication.logException(rum, e, null, Thread.currentThread())
+                rum?.let { Honeycomb.logException(it, e, null, Thread.currentThread()) }
+
             } finally {
                 span?.end()
             }
@@ -127,14 +129,7 @@ class CartViewModel(
                     span?.setStatus(StatusCode.ERROR)
                     // create an exception and send to a Honeycomb trace-participating log message
                     var exception = Exception("The application crashed - unknown error.");
-                    if (OtelDemoApplication.rum != null) {
-                        OtelDemoApplication.logException(
-                            OtelDemoApplication.rum!!,
-                            exception,
-                            null,
-                            Thread.currentThread()
-                        )
-                    }
+                    rum?.let { Honeycomb.logException(it, exception, null, Thread.currentThread()) }
                     throw exception;
                 } else if (totalExplorascopes == 9) {
                     // TODO - more interesting hang scenario with backend delay

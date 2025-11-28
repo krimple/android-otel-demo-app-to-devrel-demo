@@ -2,6 +2,7 @@ package io.opentelemetry.android.demo.shop.clients
 
 import android.content.Context.MODE_PRIVATE
 import com.google.gson.Gson
+import io.honeycomb.opentelemetry.android.Honeycomb
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.model.*
 import io.opentelemetry.android.demo.shop.ui.cart.CartViewModel
@@ -91,7 +92,7 @@ class CheckoutApiService(
                 span?.setStatus(StatusCode.ERROR, "Failed to place order");
 
                 // add log record to report exception
-                OtelDemoApplication.logException(
+                Honeycomb.logException(
                     OtelDemoApplication.rum!!,
                     e,
                     null,
