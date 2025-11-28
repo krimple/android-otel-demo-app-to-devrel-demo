@@ -1,7 +1,9 @@
 package io.opentelemetry.android.demo.shop.clients
 
 import com.google.gson.Gson
+import io.honeycomb.opentelemetry.android.Honeycomb
 import io.opentelemetry.android.demo.OtelDemoApplication
+import io.opentelemetry.android.demo.OtelDemoApplication.Companion.rum
 import io.opentelemetry.android.demo.shop.model.*
 import io.opentelemetry.android.demo.shop.session.SessionManager
 import io.opentelemetry.android.demo.shop.ui.cart.CartViewModel
@@ -82,14 +84,7 @@ class ShippingApiService {
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
-            if (OtelDemoApplication.rum !== null) {
-                OtelDemoApplication.logException(
-                    OtelDemoApplication.rum!!,
-                    e,
-                    null,
-                    Thread.currentThread()
-                )
-            }
+            rum?.let { Honeycomb.logException(it, e, null, Thread.currentThread()) }
             // Return zero cost as fallback
             Money(currencyCode = currencyCode, units = 0, nanos = 0)
         } finally {
