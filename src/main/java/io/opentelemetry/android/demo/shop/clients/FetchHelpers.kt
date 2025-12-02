@@ -73,10 +73,9 @@ class FetchHelpers {
                 // this is a spurious error and we don't want to report it
                 return
             }
-            val rum = OtelDemoApplication.rum
-            if (rum != null) {
+            if (OtelDemoApplication.rum != null) {
                 Honeycomb.logException(
-                    rum,
+                    OtelDemoApplication.rum as OpenTelemetryRum,
                     e,
                     Attributes.of(
                         AttributeKey.stringKey("app.tracedRequest.url"),
