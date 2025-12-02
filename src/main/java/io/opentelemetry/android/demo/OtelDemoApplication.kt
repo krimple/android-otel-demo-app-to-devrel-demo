@@ -61,8 +61,6 @@ class OtelDemoApplication : Application() {
             Log.w(TAG, "No otel.properties file found in assets, using defaults")
         }
         
-        val apiKey = otelProperties.getProperty("HONEYCOMB_API_KEY") 
-            ?: throw IllegalStateException("HONEYCOMB_API_KEY must be set in otel.properties")
         val serviceName = otelProperties.getProperty("SERVICE_NAME")
             ?: throw IllegalStateException("SERVICE_NAME must be set in otel.properties")
         val honeycombEndpoint = otelProperties.getProperty("HONEYCOMB_ENDPOINT")
@@ -72,7 +70,6 @@ class OtelDemoApplication : Application() {
             ?: throw IllegalStateException("API_ENDPOINT must be set in otel.properties")
         
         val options = HoneycombOptions.builder(this)
-            .setApiKey(apiKey)
             .setApiEndpoint(honeycombEndpoint)
             .setProtocol(OtlpProtocol.HTTP_PROTOBUF)
             .setServiceName(serviceName)
