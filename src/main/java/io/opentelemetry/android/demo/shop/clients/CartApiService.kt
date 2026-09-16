@@ -6,12 +6,13 @@ import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.OtelDemoApplication.Companion.rum
 import io.opentelemetry.android.demo.shop.model.*
 import io.opentelemetry.android.demo.shop.session.SessionManager
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.StatusCode
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
-
 class CartApiService {
     companion object {
         private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
@@ -42,8 +43,20 @@ class CartApiService {
                 FetchHelpers.executeRequest(request)
             }
         } catch (e: Exception) {
-            span?.setStatus(StatusCode.ERROR)
-            rum?.let { Honeycomb.logException(it, e, null, Thread.currentThread()) }
+            span?.setStatus(
+                StatusCode.ERROR,
+                e.localizedMessage ?: e.message ?: "unknown error")
+            rum?.let {
+                Honeycomb.logException(
+                    it,
+                    e,
+                    Attributes.of(
+                        AttributeKey.stringKey("name"),
+                        "exception",
+                    ),
+                    Thread.currentThread()
+                )
+            }
             throw e
         } finally {
             span?.end()
@@ -79,14 +92,34 @@ class CartApiService {
                 span?.setAttribute("app.cart.empty.reason", "new_session")
                 ServerCart(emptyList())
             } else {
-                span?.setStatus(StatusCode.ERROR)
-                rum?.let { Honeycomb.logException(it, e, null, Thread.currentThread()) }
+                span?.setStatus(StatusCode.ERROR, e.localizedMessage ?: e.message ?: "unknown error")
+                rum?.let {
+                    Honeycomb.logException(
+                        it,
+                        e,
+                        Attributes.of(
+                            AttributeKey.stringKey("name"),
+                            "exception",
+                        ),
+                        Thread.currentThread()
+                    )
+                }
                 throw e
             }
         } catch (e: Exception) {
             span?.setStatus(StatusCode.ERROR)
             if (OtelDemoApplication.rum !== null) {
-                rum?.let { Honeycomb.logException(it, e, null, Thread.currentThread()) }
+                rum?.let {
+                    Honeycomb.logException(
+                        it,
+                        e,
+                        Attributes.of(
+                            AttributeKey.stringKey("name"),
+                            "exception",
+                        ),
+                        Thread.currentThread()
+                    )
+                }
             }
             throw e
         } finally {
@@ -113,8 +146,18 @@ class CartApiService {
                 FetchHelpers.executeRequest(request)
             }
         } catch (e: Exception) {
-            span?.setStatus(StatusCode.ERROR)
-            rum?.let { Honeycomb.logException(it, e, null, Thread.currentThread()) }
+            span?.setStatus(StatusCode.ERROR, e.localizedMessage ?: e.message ?: "unknown error")
+            rum?.let {
+                Honeycomb.logException(
+                    it,
+                    e,
+                    Attributes.of(
+                        AttributeKey.stringKey("name"),
+                        "exception",
+                    ),
+                    Thread.currentThread()
+                )
+            }
             throw e
         } finally {
             span?.end()

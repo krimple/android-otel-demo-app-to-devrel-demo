@@ -31,7 +31,7 @@ class ProductDetailViewModelTest {
     fun setup() {
         MockitoAnnotations.openMocks(this)
         Dispatchers.setMain(testDispatcher)
-        viewModel = ProductDetailViewModel(productApiService)
+        viewModel = ProductDetailViewModel(productApiService, testDispatcher)
     }
 
     @After

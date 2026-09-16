@@ -8,6 +8,8 @@ import io.opentelemetry.android.demo.shop.model.*
 import io.opentelemetry.android.demo.shop.session.SessionManager
 import io.opentelemetry.android.demo.shop.ui.cart.CartViewModel
 import io.opentelemetry.android.demo.shop.ui.cart.CheckoutInfoViewModel
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.context.Context
 import okhttp3.MediaType.Companion.toMediaType
@@ -83,8 +85,20 @@ class ShippingApiService {
                 checkoutResponse.shippingCost
             }
         } catch (e: Exception) {
-            span?.setStatus(StatusCode.ERROR)
-            rum?.let { Honeycomb.logException(it, e, null, Thread.currentThread()) }
+            span?.setStatus(
+                StatusCode.ERROR,
+                e.localizedMessage ?: e.message ?: "unknown error")
+            rum?.let {
+                Honeycomb.logException(
+                    it,
+                    e,
+                    Attributes.of(
+                        AttributeKey.stringKey("name"),
+                        "exception",
+                    ),
+                    Thread.currentThread()
+                )
+            }
             // Return zero cost as fallback
             Money(currencyCode = currencyCode, units = 0, nanos = 0)
         } finally {

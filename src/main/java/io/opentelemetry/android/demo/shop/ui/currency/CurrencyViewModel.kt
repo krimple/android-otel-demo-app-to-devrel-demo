@@ -106,8 +106,9 @@ class CurrencyViewModel() : ViewModel() {
             val currentSpan = Span.current()
             if (currentSpan.isRecording) {
                 currentSpan.setAttribute("app.user.currency", currency)
-                currentSpan.setStatus(StatusCode.ERROR, "no currency found")
-            }
+                currentSpan?.setStatus(
+                    StatusCode.ERROR,
+                    "unknown currency")            }
         }
     }
 

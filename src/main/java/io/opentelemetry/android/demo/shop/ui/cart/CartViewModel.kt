@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.OtelDemoApplication.Companion.rum
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.StatusCode
 import kotlinx.coroutines.Dispatchers
 
@@ -43,57 +45,6 @@ class CartViewModel(
         started = SharingStarted.WhileSubscribed(),
         initialValue = emptyList()
     )
-
-    fun refreshCart(currencyCode: String = "USD") {
-        loadCart(currencyCode)
-    }
-
-    private fun loadCart(currencyCode: String = "USD") {
-        // User-initiated screen load - create root span
-        val tracer = OtelDemoApplication.getTracer()
-        val span = tracer?.spanBuilder("cart_vm.load_cart")
-            ?.setAttribute("app.user.currency", currencyCode)
-            ?.startSpan()
-
-        viewModelScope.launch(Dispatchers.IO) {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-
-            try {
-                // Make this span current for API calls within this coroutine
-                val scope = span?.makeCurrent()
-                val (serverCart, products) = try {
-                    val serverCart = cartApiService.getCart()
-                    val products = productApiService.fetchProducts(currencyCode)
-                    Pair(serverCart, products)
-                } finally {
-                    scope?.close()
-                }
-                val cartItems = serverCart!!.toCartItems(products)
-
-                _uiState.value = CartUiState(
-                    cartItems = cartItems,
-                    isLoading = false,
-                    errorMessage = null
-                )
-
-                span?.setAttribute("app.cart.items.count", cartItems.size.toLong())
-                span?.setAttribute("app.cart.total.cost", getTotalPrice())
-
-            } catch (e: Exception) {
-                _uiState.value = CartUiState(
-                    cartItems = emptyList(),
-                    isLoading = false,
-                    errorMessage = e.message ?: "Failed to load cart"
-                )
-
-                span?.setStatus(StatusCode.ERROR)
-                rum?.let { Honeycomb.logException(it, e, null, Thread.currentThread()) }
-
-            } finally {
-                span?.end()
-            }
-        }
-    }
 
     fun addProduct(product: Product, quantity: Int, currencyCode: String = "USD") {
         // User-initiated cart action - create root span
@@ -126,10 +77,20 @@ class CartViewModel(
 
                 if (totalExplorascopes == 10) {
                     // mark the span in error (for Honeycomb)
-                    span?.setStatus(StatusCode.ERROR)
+                    span?.setStatus(StatusCode.ERROR, "unknown error")
                     // create an exception and send to a Honeycomb trace-participating log message
                     var exception = Exception("The application crashed - unknown error.");
-                    rum?.let { Honeycomb.logException(it, exception, null, Thread.currentThread()) }
+                    rum?.let {
+                        Honeycomb.logException(
+                            it,
+                            exception,
+                            Attributes.of(
+                                AttributeKey.stringKey("name"),
+                                "exception",
+                            ),
+                            Thread.currentThread()
+                        )
+                    }
                     throw exception;
                 } else if (totalExplorascopes == 9) {
                     // TODO - more interesting hang scenario with backend delay
@@ -180,8 +141,18 @@ class CartViewModel(
                     isLoading = false,
                     errorMessage = e.message ?: "Failed to add product to cart"
                 )
-
-                span?.setStatus(StatusCode.ERROR)
+                span?.setStatus(StatusCode.ERROR, e.localizedMessage ?: e.message ?: "unknown error")
+                rum?.let {
+                    Honeycomb.logException(
+                        it,
+                        e,
+                        Attributes.of(
+                            AttributeKey.stringKey("name"),
+                            "exception",
+                        ),
+                        Thread.currentThread()
+                    )
+                }
             } finally {
                 span?.end()
             }

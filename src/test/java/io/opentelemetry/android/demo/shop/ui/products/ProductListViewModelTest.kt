@@ -43,7 +43,7 @@ class ProductListViewModelTest {
 
     @Test
     fun `viewModel can be instantiated`() = runTest {
-        viewModel = ProductListViewModel(productApiService)
+        viewModel = ProductListViewModel(productApiService, testDispatcher)
 
         // Verify the ViewModel is properly instantiated
         assertNotNull("ViewModel should be instantiated", viewModel)
@@ -70,7 +70,7 @@ class ProductListViewModelTest {
         
         whenever(productApiService.fetchProducts()).thenReturn(mockProducts)
         
-        viewModel = ProductListViewModel(productApiService)
+        viewModel = ProductListViewModel(productApiService, testDispatcher)
         viewModel.refreshProducts() // This will be first load (isRefresh=false)
         testDispatcher.scheduler.advanceUntilIdle()
         
@@ -85,7 +85,7 @@ class ProductListViewModelTest {
         val errorMessage = "Network error"
         whenever(productApiService.fetchProducts()).thenThrow(RuntimeException(errorMessage))
         
-        viewModel = ProductListViewModel(productApiService)
+        viewModel = ProductListViewModel(productApiService, testDispatcher)
         viewModel.refreshProducts() // This will be first load (isRefresh=false)
         testDispatcher.scheduler.advanceUntilIdle()
         
@@ -110,7 +110,7 @@ class ProductListViewModelTest {
         
         whenever(productApiService.fetchProducts()).thenReturn(mockProducts)
         
-        viewModel = ProductListViewModel(productApiService)
+        viewModel = ProductListViewModel(productApiService, testDispatcher)
         testDispatcher.scheduler.advanceUntilIdle()
         
         // Call refresh
@@ -137,7 +137,7 @@ class ProductListViewModelTest {
         
         whenever(productApiService.fetchProducts(any<String>())).thenReturn(mockProducts)
         
-        viewModel = ProductListViewModel(productApiService)
+        viewModel = ProductListViewModel(productApiService, testDispatcher)
         
         // First call should be initial load (isRefresh=false)
         viewModel.refreshProducts("USD")

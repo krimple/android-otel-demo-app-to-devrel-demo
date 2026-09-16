@@ -12,6 +12,8 @@ import io.opentelemetry.android.demo.shop.model.Money
 import kotlinx.coroutines.launch
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.OtelDemoApplication.Companion.rum
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.StatusCode
 import kotlinx.coroutines.Dispatchers
 import okhttp3.Dispatcher
@@ -138,8 +140,20 @@ class CheckoutInfoViewModel : ViewModel() {
                         span?.setAttribute("app.shipping.cost", cost.toDouble())
                         hasCalculatedShipping = true
                     } catch (e: Exception) {
-                        span?.setStatus(StatusCode.ERROR)
-                        rum?.let { Honeycomb.logException(it, e, null, Thread.currentThread()) }
+                        span?.setStatus(
+                            StatusCode.ERROR,
+                            e.localizedMessage ?: e.message ?: "unknown error")
+                        rum?.let {
+                            Honeycomb.logException(
+                                it,
+                                e,
+                                Attributes.of(
+                                    AttributeKey.stringKey("name"),
+                                    "exception",
+                                ),
+                                Thread.currentThread()
+                            )
+                        }
                         shippingCalculationError = "Failed to calculate shipping: ${e.message}"
                     } finally {
                         isCalculatingShipping = false

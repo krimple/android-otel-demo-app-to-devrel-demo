@@ -78,8 +78,6 @@ class FetchHelpers {
                     OtelDemoApplication.rum as OpenTelemetryRum,
                     e,
                     Attributes.of(
-                        AttributeKey.stringKey("app.tracedRequest.url"),
-                        req.url.toString(),
                         AttributeKey.stringKey("name"),
                         "exception",
                     ),

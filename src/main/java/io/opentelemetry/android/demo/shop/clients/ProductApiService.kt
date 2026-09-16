@@ -7,6 +7,8 @@ import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.OtelDemoApplication.Companion.rum
 import io.opentelemetry.android.demo.shop.model.Product
 import io.opentelemetry.android.demo.shop.session.SessionManager
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.StatusCode
 import okhttp3.Request
 
@@ -16,7 +18,7 @@ class ProductApiService(
         val tracer = OtelDemoApplication.getTracer()
 
         val span = tracer?.spanBuilder("product_api_service.fetch_products")
-            ?.setAttribute("app.user.currency", currencyCode)
+            //?.setAttribute("app.user.currency", currencyCode)
             ?.startSpan()
         return try {
             span?.makeCurrent().use {
@@ -32,8 +34,20 @@ class ProductApiService(
                 Gson().fromJson<List<Product>>(bodyText, listType)
             }
         } catch (e: Exception) {
-            span?.setStatus(StatusCode.ERROR, "Failed to fetch products");
-            rum?.let { Honeycomb.logException(it, e, null, Thread.currentThread()) }
+            span?.setStatus(
+                StatusCode.ERROR,
+                e.localizedMessage ?: e.message ?: "unknown error")
+            rum?.let {
+                Honeycomb.logException(
+                    it,
+                    e,
+                    Attributes.of(
+                        AttributeKey.stringKey("name"),
+                        "exception",
+                    ),
+                    Thread.currentThread()
+                )
+            }
             throw e
         } finally {
             span?.end()
@@ -60,8 +74,22 @@ class ProductApiService(
             }
         } catch (e: Exception) {
             // mark the span in error
-            span?.setStatus(StatusCode.ERROR)
-            throw e;
+            span?.setStatus(
+                StatusCode.ERROR,
+                e.localizedMessage ?: e.message ?: "unknown error")
+            rum?.let {
+                Honeycomb.logException(
+                    it,
+                    e,
+                    Attributes.of(
+                        AttributeKey.stringKey("name"),
+                        "exception",
+                    ),
+                    Thread.currentThread()
+                )
+            }
+            throw e
+
         } finally {
             span?.end()
         }

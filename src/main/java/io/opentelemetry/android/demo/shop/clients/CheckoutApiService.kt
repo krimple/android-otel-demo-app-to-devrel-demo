@@ -5,7 +5,6 @@ import com.google.gson.Gson
 import io.honeycomb.opentelemetry.android.Honeycomb
 import io.opentelemetry.android.demo.OtelDemoApplication
 import io.opentelemetry.android.demo.shop.model.*
-import io.opentelemetry.android.demo.shop.ui.cart.CartViewModel
 import io.opentelemetry.android.demo.shop.ui.cart.CheckoutInfoViewModel
 import io.opentelemetry.android.demo.shop.session.SessionManager
 import okhttp3.MediaType.Companion.toMediaType
@@ -89,13 +88,21 @@ class CheckoutApiService(
             } catch (e: Exception) {
                 // the error occurred inside of the placeOrder method, so the exception
                 // was reported there. This is just an errored span.
-                span?.setStatus(StatusCode.ERROR, "Failed to place order");
+                span?.setStatus(
+                    StatusCode.ERROR,
+                    e.localizedMessage ?: e.message ?: "unknown error")
 
                 // add log record to report exception
+                // important: needs the "name" property so we can set it to "exception"
+                // to make it look more correct.
+                val attributes = io.opentelemetry.api.common.Attributes.builder()
+                    .put("name", "exception")
+                    .build()
+
                 Honeycomb.logException(
                     OtelDemoApplication.rum!!,
                     e,
-                    null,
+                    attributes,
                     Thread.currentThread()
                 )
                 throw e

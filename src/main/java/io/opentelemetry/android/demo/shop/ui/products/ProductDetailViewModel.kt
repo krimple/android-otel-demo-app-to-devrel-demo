@@ -2,10 +2,15 @@ package io.opentelemetry.android.demo.shop.ui.products
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.honeycomb.opentelemetry.android.Honeycomb
 import io.opentelemetry.android.demo.OtelDemoApplication
+import io.opentelemetry.android.demo.OtelDemoApplication.Companion.rum
 import io.opentelemetry.android.demo.shop.clients.ProductApiService
 import io.opentelemetry.android.demo.shop.model.Product
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
 import io.opentelemetry.api.trace.StatusCode
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +24,8 @@ data class ProductDetailUiState(
 )
 
 class ProductDetailViewModel(
-    private val productApiService: ProductApiService = ProductApiService()
+    private val productApiService: ProductApiService = ProductApiService(),
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(ProductDetailUiState())
@@ -33,7 +39,7 @@ class ProductDetailViewModel(
             ?.setAttribute("app.user.currency", currencyCode)
             ?.startSpan()
         
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
 
             try {
@@ -55,7 +61,18 @@ class ProductDetailViewModel(
                 span?.setAttribute("app.product.price.usd", product.priceValue())
                 
             } catch (e: Exception) {
-                span?.setStatus(StatusCode.ERROR)
+                span?.setStatus(StatusCode.ERROR, e.localizedMessage ?: e.message ?: "unknown error")
+                rum?.let {
+                    Honeycomb.logException(
+                        it,
+                        e,
+                        Attributes.of(
+                            AttributeKey.stringKey("name"),
+                            "exception",
+                        ),
+                        Thread.currentThread()
+                    )
+                }
                 _uiState.value = ProductDetailUiState(
                     product = null,
                     isLoading = false,
